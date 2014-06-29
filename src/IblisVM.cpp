@@ -59,6 +59,19 @@ void IblisVM::DecodeAndExecute(Thread* t)
 	case Op::CGE:
 		Arithmetic(t, instr);
 		break;
+	case Op::JUMP:
+		Jump(t, instr);
+		break;
+	case Op::JUMP_TRUE:
+		JumpTrue(t, instr);
+		break;
+	case Op::FORK:
+		Fork(t, instr);
+		break;
+	}
+	
+	if (op != Op::JUMP && op != Op::JUMP_TRUE){
+		t->ip()++;
 	}
 }
 
@@ -69,23 +82,23 @@ bool IblisVM::ExecuteNext()
 	}
 	
 	curThread++;
-	if (curThread > threads.size()){
+	if (curThread >= threads.size()){
 		curThread = 0;
 	}
+	
 	Thread *t = threads[curThread];
+	
 	try {
 		DecodeAndExecute(t);
-		t->ip()++;
 	}
 	catch (Regfault& regv) {
-		
 	}
 	catch (Segfault& segv) {
-		
 	}
 	catch (IllegalOp& illOp) {
 	}
 	
+	return true;
 }
 
 //=====================INSTRUCTION IMPLEMENTATIONS====================
@@ -185,5 +198,48 @@ void IblisVM::Arithmetic(Thread* t, Word instr)
 
 void IblisVM::Jump(Thread* t, Word instr)
 {
+	if (IndirectMode(instr)){
+		t->ip() = t->r()[RegC(instr)];
+	}
+	else {
+		t->ip() = Addr(instr);
+	}
+}
+
+void IblisVM::JumpTrue(Thread* t, Word instr)
+{
+	Word jumpAddr;
 	
+	if (IndirectMode(instr)){
+		jumpAddr = t->r()[RegB(instr)];
+	}
+	else {
+		jumpAddr = Addr(instr);
+	}
+	
+	if (t->r()[RegC(instr)]){
+		t->ip() = jumpAddr;
+	}
+	else {
+		t->ip()++;
+	}
+}
+
+void IblisVM::Fork(Thread* t, Word instr)
+{
+	Word segment = RegC(instr);
+	
+	if (segment > IBLIS_N_SEGMENTS){
+		throw Segfault();
+	}
+	
+	Word addr = Addr(instr);
+	
+	if (addr > IBLIS_MEM_SIZE){
+		throw Segfault();
+	}
+	
+	if (!SpawnThread(segment, addr)){
+		throw ThreadFault();
+	}
 }

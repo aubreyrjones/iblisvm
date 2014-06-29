@@ -26,6 +26,7 @@ class ExecutionException : public std::exception {};
 class Regfault : public ExecutionException {};
 class Segfault : public ExecutionException {};
 class IllegalOp : public ExecutionException {};
+class ThreadFault : public ExecutionException {};
 
 
 /**
@@ -101,6 +102,8 @@ private:
 	void Const(Thread *t, Word instr);
 	void Arithmetic(Thread *t, Word instr);
 	void Jump(Thread *t, Word instr);
+	void JumpTrue(Thread* t, Word instr);
+	void Fork(Thread* t, Word instr);
 		
 	/**
 	 * Retrieves the value indirectly through the given register.

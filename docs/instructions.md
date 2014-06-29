@@ -127,7 +127,7 @@ JUMP IF TRUE -
 
 FORK -
 
-    (segment, addr) : spawn a new thread in the given local segment,
+    (addr, segment) : spawn a new thread in the given local segment,
     with initial instruction pointer value equal to addr.
 
 
