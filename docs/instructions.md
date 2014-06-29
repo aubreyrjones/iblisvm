@@ -75,48 +75,58 @@ INSTRUCTION SET
 NOP : does nothing, advances IP
 
 LOAD -
+
     (addr, regC) : stores the contents of addr in regC.
     (regB, regC) : stores the contents of [regB] in regC.
     
 LOAD PEER -
+
     (addr, regC) : stores the contents of addr on PEER machine to regC.
     (regB, regC) : stores the contents of [regB] on PEER machine to regC.
 
 STORE -
+
     (addr, regC) : stores the contents of regC in addr.
     (regB, regC) : stores the contents of regC in [regB].
 
 STORE PEER -
+
     (addr, regC) : stores the contents of regC in addr on PEER machine.
     (regB, regC) : stores the contents of regC in [regB] on PEER machine.
 
 COPY -
+
     (regB, regC) : stores the contents of regC in regB.
 
 CONST -
+
     (literal, regC) : stores the signed 18-bit literal in regC.
 
 
 [ADD, SUB, MUL, DIV, MOD] -
+
     (a, b, regC) : a or b may be either registers or 8-bit signed
     literals, performs the operation "regC = a . b" where '.' is
     whichever operation is specified.
 
 [CEQ, CL, CLE, CG, CGE] -
+
     (a, b, regC) : a or b may be either registers or 8-bit signed
     literals, performs the operation "regC = (a . b) ? 1 : 0".
 
 
 JUMP -
+
     (addr) : jump to the given address literal
     (regC) : jump to the address stored in regC.
 
 JUMP IF TRUE -
+
     (addr, regC) : jump to the given address literal if regC != 0
     (regB, regC) : jump to the address stored in regB if regC != 0
 
-
 FORK -
+
     (segment, addr) : spawn a new thread in the given local segment,
     with initial instruction pointer value equal to addr.
 
