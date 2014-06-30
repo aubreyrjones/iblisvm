@@ -9,6 +9,21 @@
 
 using namespace iblis;
 
+Word& Thread::ip()
+{
+	return registers[0];
+}
+
+Segment& Thread::m() 
+{
+	return vm->GetSegment(segmentIndex);
+}
+
+RegisterFile& Thread::r() 
+{
+	return registers;
+}
+
 IblisVM::IblisVM() :
 	threads(IBLIS_MAX_THREADS),
 	curThread(0)
@@ -25,9 +40,7 @@ bool IblisVM::SpawnThread(Word segment, Word address)
 		return false;
 	}
 	
-	Thread *newThread = new Thread;
-	newThread->segment = &segments[segment];
-	newThread->ip() = address;
+	Thread *newThread = new Thread(this, segment, address);
 	
 	threads.push_back(newThread);
 }
@@ -43,7 +56,7 @@ void IblisVM::KillThread(Thread* t)
 
 void IblisVM::DecodeAndExecute(Thread* t)
 {
-	Word instr = (*t->segment)[t->ip()];
+	Word instr = t->m()[t->ip()];
 	
 	Op op = DecodeOp(instr);
 	switch (op){

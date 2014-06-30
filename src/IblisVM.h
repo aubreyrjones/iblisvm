@@ -69,24 +69,46 @@ struct RegisterFile {
 	}
 };
 
+enum class ThreadState
+{
+	INIT,
+	RUNNING,
+	HALTED
+};
+
+class IblisVM;
 /**
  * A thread is the unit of execution in Iblis. It has a complete set of
  * registers, and must occupy a specific segment.
  */
 struct Thread {
-	Segment *segment;
 	RegisterFile registers;
-	Segment *remoteSegment;
+	Word segmentIndex;
+	
+	IblisVM *vm;
 	
 	Thread *prevThread;
 	Thread *nextThread;
 	
-	Word& ip() {return registers[0];}
-	Segment& m() {return *segment;}
-	RegisterFile& r() {return registers;}
+	ThreadState state;
+	
+	Thread(IblisVM *vm, Word segment, Word address) : 
+		segmentIndex(segment),
+		vm(vm), 
+		state(ThreadState::INIT) 
+	{
+		registers[0] = address;
+	} 
+	
+	Word& ip();
+	Segment& m();
+	RegisterFile& r();
 };
 
+
+//======================VM INSTANCE=====================
 class IblisVM {
+	friend Thread;
 protected:
 	Segment segments[IBLIS_N_SEGMENTS];
 	std::vector<Thread*> threads;
@@ -111,6 +133,12 @@ private:
 	inline Word Indirect(Thread *t, const Word& reg, bool remote = false)
 	{
 		return t->m()[t->r()[reg]];
+	}
+	
+protected:
+	inline Segment& GetSegment(Word index)
+	{
+		return segments[index];
 	}
 	
 public:
