@@ -126,6 +126,11 @@ public:
 	bool SpawnThread(Word segment, Word address);
 	
 	/**
+	 * Kills the given thread.
+     */
+	void KillThread(Thread* t);
+	
+	/**
 	 * Executes the next instruction from the next thread.
 	 * 
 	 * @return false if all execution has stopped and the VM can be shut down,

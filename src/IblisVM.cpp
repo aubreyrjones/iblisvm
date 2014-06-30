@@ -32,6 +32,15 @@ bool IblisVM::SpawnThread(Word segment, Word address)
 	threads.push_back(newThread);
 }
 
+void IblisVM::KillThread(Thread* t)
+{
+	for (std::vector<Thread*>::iterator it = threads.begin(); it != threads.end(); it++){
+		if (t == *it){
+			threads.erase(it);
+		}
+	}
+}
+
 void IblisVM::DecodeAndExecute(Thread* t)
 {
 	Word instr = (*t->segment)[t->ip()];
@@ -91,14 +100,11 @@ bool IblisVM::ExecuteNext()
 	try {
 		DecodeAndExecute(t);
 	}
-	catch (Regfault& regv) {
-	}
-	catch (Segfault& segv) {
-	}
-	catch (IllegalOp& illOp) {
+	catch (ExecutionException& ex) {
+		KillThread(t);
 	}
 	
-	return true;
+	return threads.size() > 0;
 }
 
 //=====================INSTRUCTION IMPLEMENTATIONS====================

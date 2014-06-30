@@ -62,12 +62,12 @@ INSTRUCTION TYPES
 -----------------
 
 There are three instruction types, varying slightly in their
-encoding. In the following table, "<>" means a sequence of 1 or more
-reserved or unused bits.
+encoding. In the following table, "<n>" means a sequence of n reserved
+or unused bits.
 
-Type A - operation:mode:address:regC
-Type B - operation:mode:<>:regB:regC
-Type C - operation:modeA:modeB:<>:regA:regB:regC
+    Type A - operation:mode:address:regC
+    Type B - operation:mode:<10>:regB:regC
+    Type C - operation:modeA:modeB:<1>:regA:regB:regC
 
 INSTRUCTION SET
 ---------------
