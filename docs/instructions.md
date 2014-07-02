@@ -89,7 +89,7 @@ return address on the stack, and then jumps to the argument
 address.
 
 No RETURN instruction is provided. For return values, choose a
-register to use for return values. To return, use "POP r[0],
+consistent register to hold the value. To return, use "POP r[0],
 stackPointer".
 
 IBLIS does not define any convention for subroutine arguments or
@@ -108,6 +108,7 @@ For example:
     PUSH r[14], r[128] ; push parameter
     CALL add5, r[128] ; call add5 subroutine
     ADD 1, r[128], r[128] ; clean up parameter
+    COPY r[127], r[14] ; put the return value wherever you want it.
     ;bunch of other code
     add5:
     ADD 1, r[128], r[129] ; get address of parameter
@@ -115,16 +116,30 @@ For example:
     ADD r[127], 5, r[127] ; retval = retval + 5
     POP r[0], r[128] ; pop the return value into the IP
 
+Note: the CALL instruction stores the actual address of the CALL
+itself, not advanced by one. This is because the POP used for return
+will advance the IP after executing. The result is that if you use the
+POP to return from a function, you will resume execution the
+instruction after CALL. However, if you JUMP to the address stored by
+CALL, the IP will not be incremented, and the next instruction
+executed will be that same CALL instruction--perhaps creating a loop.
+
+
 INSTRUCTION TYPES
 -----------------
 
 There are three instruction types, varying slightly in their
-encoding. In the following table, "\<n\>" means a sequence of n reserved
-or unused bits.
+encoding. Bit lengths are below field names. "\<n\>" means a sequence
+of n reserved or unused bits.
 
     Type A - operation:mode:address:regC
+             ----5----:-1--:---18--:--8-
+
     Type B - operation:mode:<10>:regB:regC
+             ----5----:-1--:-10-:-8--:-8--
+
     Type C - operation:modeA:modeB:<1>:regA:regB:regC
+             ----5----:--1--:--1--:-1-:-8--:-8--:-8--
 
 INSTRUCTION SET
 ---------------

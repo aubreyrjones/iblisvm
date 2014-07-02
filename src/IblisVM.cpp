@@ -112,7 +112,9 @@ void IblisVM::DecodeAndExecute(ThreadP t)
 		break;
 	}
 	
-	if (op != Op::JUMP && op != Op::JUMP_TRUE && op != Op::CALL){
+	if (op != Op::JUMP && 
+		op != Op::JUMP_TRUE && 
+		op != Op::CALL){
 		t->ip()++;
 	}
 }
