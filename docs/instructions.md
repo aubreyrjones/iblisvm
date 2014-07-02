@@ -88,58 +88,78 @@ INSTRUCTION SET
 
 NOP : does nothing, advances IP
 
-LOAD -
+LOAD - Load the contents of memory into a register.
 
     (addr, regC) : stores the contents of addr in regC.
     (regB, regC) : stores the contents of [regB] in regC.
     
-LOAD PEER -
+LOAD PEER - Load the contents of peer memory into a register.
 
     (addr, regC) : stores the contents of addr on PEER machine to regC.
     (regB, regC) : stores the contents of [regB] on PEER machine to regC.
 
-STORE -
+STORE - Store the contents of a register into memory.
 
     (addr, regC) : stores the contents of regC in addr.
     (regB, regC) : stores the contents of regC in [regB].
 
-STORE PEER -
+STORE PEER - Store the contents of a register into peer memory.
 
     (addr, regC) : stores the contents of regC in addr on PEER machine.
     (regB, regC) : stores the contents of regC in [regB] on PEER machine.
 
-COPY -
+PUSH - Push a word to the stack, using any register as a stack
+pointer.
+
+    (regb, regc) : stores the contents of regB in [regC], and
+    decrements regC. (regC is the stack pointer.)
+
+POP - Pop a word from the stack, using any register as a stack
+pointer.
+
+    (regB, regC) : stores the contents of [regC] in regB, and
+    increments regC. (regC is the stack pointer.)
+
+COPY - Copy the contents of one register to another.
 
     (regB, regC) : stores the contents of regC in regB.
 
-CONST -
+CONST - Load a literal value into a register.
 
     (literal, regC) : stores the signed 18-bit literal in regC.
 
 
-[ADD, SUB, MUL, DIV, MOD] -
+[ADD, SUB, MUL, DIV, MOD] - Arithemetic operators.
 
     (a, b, regC) : a or b may be either registers or 8-bit signed
     literals, performs the operation "regC = a . b" where '.' is
     whichever operation is specified.
 
-[CEQ, CL, CLE, CG, CGE] -
+[CEQ, CL, CLE, CG, CGE] - Comparison operators.
 
     (a, b, regC) : a or b may be either registers or 8-bit signed
     literals, performs the operation "regC = (a . b) ? 1 : 0".
 
-
-JUMP -
+JUMP - Unconditional jump.
 
     (addr) : jump to the given address literal
     (regC) : jump to the address stored in regC.
 
-JUMP IF TRUE -
+JUMP IF TRUE - Conditional jump.
 
     (addr, regC) : jump to the given address literal if regC != 0
     (regB, regC) : jump to the address stored in regB if regC != 0
 
-FORK -
+CALL - Push IP + 1 to the stack, and jump.
+
+    (addr, regC) : PUSH (r[0] + 1), regC; and jump to addr.
+    (regB, regC) : PUSH (r[0] + 1), regC; and jump to address in regB.
+
+RETURN - Return from a CALL instruction.
+
+    Unnecessary. Use: POP r[0], regC;
+
+FORK - Start a new thread.
 
     (addr, segment) : spawn a new thread in the given local segment,
     with initial instruction pointer value equal to addr.
