@@ -175,14 +175,14 @@ void IblisVM::Copy(ThreadP t, Word instr)
 
 void IblisVM::push_impl(ThreadP t, Word stackRegister, Word value)
 {
-	t->m(t->r(stackRegister)) = value;
 	t->r(stackRegister)--;
+	t->m(t->r(stackRegister)) = value;
 }
 
 Word IblisVM::pop_impl(ThreadP t, Word stackRegister)
 {
-	t->r(stackRegister)++;
 	return t->m(t->r(stackRegister));
+	t->r(stackRegister)++;
 }
 
 void IblisVM::Push(ThreadP t, Word instr)
@@ -303,7 +303,7 @@ void IblisVM::Call(ThreadP t, Word instr)
 		jumpAddr = Addr(instr);
 	}
 	
-	push_impl(t, RegC(instr), t->ip() + 1);
+	push_impl(t, RegC(instr), t->ip());
 	t->ip() = jumpAddr;
 }
 

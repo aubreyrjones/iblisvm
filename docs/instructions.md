@@ -55,11 +55,11 @@ illegal instruction or when a legal instruction attempts to access a
 memory location that is outside its segment.
 
 ADDRESSING MODES
--------------
+----------------
 
 IBLIS is a RISC-style load/store architecture. Memory may only be
-accessed via LOAD and STORE operations. There are two address modes
-for LOAD and STORE:
+accessed via LOAD, STORE, and stack operations. There are two address
+modes for LOAD and STORE:
 
     DIRECT - the 18-bit address to load/store is directly encoded in
         the instruction.
@@ -72,11 +72,54 @@ contents or signed 8-bit literal values. Both are directly encoded
 into the instruction. There are no indirect-mode arithmetic
 operations.
 
+STACK OPERATIONS
+----------------
+
+As a nod to modern fashion, IBLIS supports structured programming by
+exposing stack-oriented memory operations.
+
+Any register may be used as a stack pointer. In fact, using multiple
+registers, it's possible to have mulitple, separate stacks.
+
+SUBROUTINES
+-----------
+
+A CALL instruction is provided for subroutine jumps. This stores a
+return address on the stack, and then jumps to the argument
+address.
+
+No RETURN instruction is provided. For return values, choose a
+register to use for return values. To return, use "POP r[0],
+stackPointer".
+
+IBLIS does not define any convention for subroutine arguments or
+parameters. It is up to each programmer to decide those for
+themselves. One possible scheme is to pass parameters on the stack,
+and use a particular register as return value. You'll also need to
+decide which registers subroutines may freely use, and which they must
+leave alone.
+
+For example:
+
+    ; r[128] is the stack pointer
+    ; r[127] is return register
+    ; r[129] and above are free for subroutine use.
+    CONST 125, r[14]
+    PUSH r[14], r[128] ; push parameter
+    CALL add5, r[128] ; call add5 subroutine
+    ADD 1, r[128], r[128] ; clean up parameter
+    ;bunch of other code
+    add5:
+    ADD 1, r[128], r[129] ; get address of parameter
+    LOAD r[127], r[129] ; get the parameter
+    ADD r[127], 5, r[127] ; retval = retval + 5
+    POP r[0], r[128] ; pop the return value into the IP
+
 INSTRUCTION TYPES
 -----------------
 
 There are three instruction types, varying slightly in their
-encoding. In the following table, "<n>" means a sequence of n reserved
+encoding. In the following table, "\<n\>" means a sequence of n reserved
 or unused bits.
 
     Type A - operation:mode:address:regC
@@ -111,14 +154,14 @@ STORE PEER - Store the contents of a register into peer memory.
 PUSH - Push a word to the stack, using any register as a stack
 pointer.
 
-    (regb, regc) : stores the contents of regB in [regC], and
-    decrements regC. (regC is the stack pointer.)
+    (regb, regc) : decrements regC, then stores the contents of regB in [regC]
+                   (regC is the stack pointer.)
 
 POP - Pop a word from the stack, using any register as a stack
 pointer.
 
-    (regB, regC) : increments regC, then stores the contents of [regC]
-    in regB. (regC is the stack pointer.)
+    (regB, regC) : loads the contents of [regC] in regB, then
+                   increments regC. (regC is the stack pointer.)
 
 COPY - Copy the contents of one register to another.
 
@@ -150,7 +193,7 @@ JUMP IF TRUE - Conditional jump.
     (addr, regC) : jump to the given address literal if regC != 0
     (regB, regC) : jump to the address stored in regB if regC != 0
 
-CALL - Push IP + 1 to the stack, and jump.
+CALL - Push IP to the stack, and jump.
 
     (addr, regC) : PUSH (r[0] + 1), regC; and jump to addr.
     (regB, regC) : PUSH (r[0] + 1), regC; and jump to address in regB.
