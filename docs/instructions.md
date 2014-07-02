@@ -4,19 +4,26 @@ IBLIS - Important Business Logic Instruction Set
 THREADS and SEGMENTS
 --------
 
-Each IBLIS CPU is capable of executing a large number of simultaneous
-threads of execution.
+A IBLIS CPU is capable of executing a large number of simultaneous
+threads of execution. The CPU executes one instruction in each thread
+in turn, round robin fashion.
 
-However, each thread is restricted to a single memory segment selected
-when the thread is launched. Each segment is a complete IBLIS address
-space.
+Each thread is restricted to a single memory segment selected when the
+thread is launched. Each segment is a complete IBLIS address
+space. [Possible restriction: Less than complete amount of memory.]
 
 REGISTERS
 ---------
 
-Each IBLIS thread has 256 registers, of which 255 are general
-purpose. They are addressed by their index, starting at 0. Register 0
-is the instruction pointer for the thread.
+Each IBLIS thread has 256 registers, of which 254 are general
+purpose. They are addressed by their index, starting at 0 and written
+as "r[n]" where n is the register index.
+
+Register 0 is the instruction pointer for the thread. Throughout the
+execution of an instruction, r[0] will contain the address of the
+currenly-executing instruction.
+
+[Possible expansion: Register 255 is the error trap register.  See "error handling".]
 
 All registers are 32 bits. For all arithmetic and comparison
 operations, the contents of the registers are treated as SIGNED
@@ -39,6 +46,13 @@ COMMUNICATIONS
 
 In addition to the thread's local memory segment, a thread may also be
 connected to a single remote segment, called the peer segment.
+
+ERROR HANDLING
+--------------
+
+An error occurs when a thread attempts to execute an unknown or
+illegal instruction or when a legal instruction attempts to access a
+memory location that is outside its segment.
 
 ADDRESSING MODES
 -------------

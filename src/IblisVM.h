@@ -9,6 +9,7 @@
 #include <string.h>
 #include <vector>
 #include <exception>
+#include <memory>
 #include "ISA.h"
 
 #ifndef IBLISVM_H
@@ -87,9 +88,6 @@ struct Thread {
 	
 	IblisVM *vm;
 	
-	Thread *prevThread;
-	Thread *nextThread;
-	
 	ThreadState state;
 	
 	Thread(IblisVM *vm, Word segment, Word address) : 
@@ -111,28 +109,33 @@ class IblisVM {
 	friend Thread;
 protected:
 	Segment segments[IBLIS_N_SEGMENTS];
-	std::vector<Thread*> threads;
+	std::vector<std::shared_ptr<Thread> > threads;
 	
 	int curThread;
 	
 private:
-	void DecodeAndExecute(Thread *thread);
+	void DecodeAndExecute(std::shared_ptr<Thread>thread);
 	
-	void Load(Thread *t, Word instr);
-	void Store(Thread *t, Word instr);
-	void Copy(Thread *t, Word instr);
-	void Const(Thread *t, Word instr);
-	void Arithmetic(Thread *t, Word instr);
-	void Jump(Thread *t, Word instr);
-	void JumpTrue(Thread* t, Word instr);
-	void Fork(Thread* t, Word instr);
+	void Load(std::shared_ptr<Thread> t, Word instr);
+	void Store(std::shared_ptr<Thread> t, Word instr);
+	void Copy(std::shared_ptr<Thread> t, Word instr);
+	void Const(std::shared_ptr<Thread> t, Word instr);
+	void Arithmetic(std::shared_ptr<Thread> t, Word instr);
+	void Jump(std::shared_ptr<Thread> t, Word instr);
+	void JumpTrue(std::shared_ptr<Thread> t, Word instr);
+	void Fork(std::shared_ptr<Thread> t, Word instr);
 		
 	/**
 	 * Retrieves the value indirectly through the given register.
      */
-	inline Word Indirect(Thread *t, const Word& reg, bool remote = false)
+	inline Word Indirect(std::shared_ptr<Thread>t, const Word& reg, bool remote = false)
 	{
-		return t->m()[t->r()[reg]];
+		if (!remote){
+			return t->m()[t->r()[reg]];
+		}
+		else {
+			return 0;
+		}
 	}
 	
 protected:
@@ -156,7 +159,7 @@ public:
 	/**
 	 * Kills the given thread.
      */
-	void KillThread(Thread* t);
+	void KillThread(std::shared_ptr<Thread> t);
 	
 	/**
 	 * Executes the next instruction from the next thread.
