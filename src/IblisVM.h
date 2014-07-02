@@ -100,35 +100,44 @@ struct Thread {
 	
 	Word& ip();
 	Segment& m();
+	Word& m(Word addr);
 	RegisterFile& r();
+	Word& r(Word addr);
 };
 
+typedef std::shared_ptr<Thread> ThreadP;
 
 //======================VM INSTANCE=====================
 class IblisVM {
 	friend Thread;
 protected:
 	Segment segments[IBLIS_N_SEGMENTS];
-	std::vector<std::shared_ptr<Thread> > threads;
+	std::vector<ThreadP> threads;
 	
 	int curThread;
 	
-private:
-	void DecodeAndExecute(std::shared_ptr<Thread>thread);
+	void push_impl(ThreadP t, Word stackRegister, Word value);
+	Word pop_impl(ThreadP t, Word stackRegister);
 	
-	void Load(std::shared_ptr<Thread> t, Word instr);
-	void Store(std::shared_ptr<Thread> t, Word instr);
-	void Copy(std::shared_ptr<Thread> t, Word instr);
-	void Const(std::shared_ptr<Thread> t, Word instr);
-	void Arithmetic(std::shared_ptr<Thread> t, Word instr);
-	void Jump(std::shared_ptr<Thread> t, Word instr);
-	void JumpTrue(std::shared_ptr<Thread> t, Word instr);
-	void Fork(std::shared_ptr<Thread> t, Word instr);
+private:
+	void DecodeAndExecute(ThreadP thread);
+	
+	void Load(ThreadP t, Word instr);
+	void Store(ThreadP t, Word instr);
+	void Copy(ThreadP t, Word instr);
+	void Push(ThreadP t, Word instr);
+	void Pop(ThreadP t, Word instr);
+	void Const(ThreadP t, Word instr);
+	void Arithmetic(ThreadP t, Word instr);
+	void Jump(ThreadP t, Word instr);
+	void JumpTrue(ThreadP t, Word instr);
+	void Call(ThreadP t, Word instr);
+	void Fork(ThreadP t, Word instr);
 		
 	/**
 	 * Retrieves the value indirectly through the given register.
      */
-	inline Word Indirect(std::shared_ptr<Thread>t, const Word& reg, bool remote = false)
+	inline Word Indirect(ThreadP t, const Word& reg, bool remote = false)
 	{
 		if (!remote){
 			return t->m()[t->r()[reg]];
@@ -159,7 +168,7 @@ public:
 	/**
 	 * Kills the given thread.
      */
-	void KillThread(std::shared_ptr<Thread> t);
+	void KillThread(ThreadP t);
 	
 	/**
 	 * Executes the next instruction from the next thread.

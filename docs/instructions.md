@@ -117,8 +117,8 @@ pointer.
 POP - Pop a word from the stack, using any register as a stack
 pointer.
 
-    (regB, regC) : stores the contents of [regC] in regB, and
-    increments regC. (regC is the stack pointer.)
+    (regB, regC) : increments regC, then stores the contents of [regC]
+    in regB. (regC is the stack pointer.)
 
 COPY - Copy the contents of one register to another.
 
@@ -159,7 +159,7 @@ RETURN - Return from a CALL instruction.
 
     Unnecessary. Use: POP r[0], regC;
 
-FORK - Start a new thread.
+FORK -
 
     (addr, segment) : spawn a new thread in the given local segment,
     with initial instruction pointer value equal to addr.

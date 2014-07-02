@@ -44,6 +44,8 @@ enum class Op : Word
 	LOAD_PEER,
 	STORE,
 	STORE_PEER,
+	PUSH,
+	POP,
 	COPY,
 	CONST,
 	ADD,
@@ -58,6 +60,7 @@ enum class Op : Word
 	CGE,
 	JUMP,
 	JUMP_TRUE,
+	CALL,
 	FORK,
 	ILLEGAL = 32
 };
@@ -87,11 +90,21 @@ inline bool IndirectMode(const Word& i)
 	return i & IBLIS_LS_MODE_BIT;
 }
 
+/**
+ * Is the A argument a literal?
+ * @param i
+ * @return 
+ */
 inline bool LiteralA(const Word& i)
 {
 	return i & IBLIS_LIT_A_BIT;
 }
 
+/**
+ * Is the B argument a literal?
+ * @param i
+ * @return 
+ */
 inline bool LiteralB(const Word& i)
 {
 	return i & IBLIS_LIT_B_BIT;

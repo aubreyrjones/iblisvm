@@ -19,9 +19,19 @@ Segment& Thread::m()
 	return vm->GetSegment(segmentIndex);
 }
 
+Word& Thread::m(Word addr)
+{
+	return vm->GetSegment(segmentIndex)[addr];
+}
+
 RegisterFile& Thread::r() 
 {
 	return registers;
+}
+
+Word& Thread::r(Word addr)
+{
+	return registers[addr];
 }
 
 IblisVM::IblisVM() :
@@ -40,22 +50,22 @@ bool IblisVM::SpawnThread(Word segment, Word address)
 		return false;
 	}
 	
-	std::shared_ptr<Thread> newThread(new Thread(this, segment, address));
+	ThreadP newThread(new Thread(this, segment, address));
 	
 	threads.push_back(newThread);
 }
 
-void IblisVM::KillThread(std::shared_ptr<Thread> t)
+void IblisVM::KillThread(ThreadP t)
 {
 	t->state = ThreadState::HALTED;
-	for (std::vector<std::shared_ptr<Thread>>::iterator it = threads.begin(); it != threads.end(); it++){
+	for (std::vector<ThreadP>::iterator it = threads.begin(); it != threads.end(); it++){
 		if (t == *it){
 			threads.erase(it);
 		}
 	}
 }
 
-void IblisVM::DecodeAndExecute(std::shared_ptr<Thread> t)
+void IblisVM::DecodeAndExecute(ThreadP t)
 {
 	Word instr = t->m()[t->ip()];
 	
@@ -69,6 +79,12 @@ void IblisVM::DecodeAndExecute(std::shared_ptr<Thread> t)
 		break;
 	case Op::COPY:
 		Copy(t, instr);
+		break;
+	case Op::PUSH:
+		Push(t, instr);
+		break;
+	case Op::POP:
+		Pop(t, instr);
 		break;
 	case Op::ADD:
 	case Op::SUB:
@@ -88,12 +104,15 @@ void IblisVM::DecodeAndExecute(std::shared_ptr<Thread> t)
 	case Op::JUMP_TRUE:
 		JumpTrue(t, instr);
 		break;
+	case Op::CALL:
+		Call(t, instr);
+		break;
 	case Op::FORK:
 		Fork(t, instr);
 		break;
 	}
 	
-	if (op != Op::JUMP && op != Op::JUMP_TRUE){
+	if (op != Op::JUMP && op != Op::JUMP_TRUE && op != Op::CALL){
 		t->ip()++;
 	}
 }
@@ -109,7 +128,7 @@ bool IblisVM::ExecuteNext()
 		curThread = 0;
 	}
 	
-	std::shared_ptr<Thread>t = threads[curThread];
+	ThreadP t = threads[curThread];
 	
 	try {
 		DecodeAndExecute(t);
@@ -123,7 +142,7 @@ bool IblisVM::ExecuteNext()
 
 //=====================INSTRUCTION IMPLEMENTATIONS====================
 
-void IblisVM::Load(std::shared_ptr<Thread> t, Word instr)
+void IblisVM::Load(ThreadP t, Word instr)
 {
 	Word loadAddr;
 	if (IndirectMode(instr)){
@@ -136,7 +155,7 @@ void IblisVM::Load(std::shared_ptr<Thread> t, Word instr)
 	t->r()[RegC(instr)] = t->m()[loadAddr];
 }
 
-void IblisVM::Store(std::shared_ptr<Thread> t, Word instr)
+void IblisVM::Store(ThreadP t, Word instr)
 {
 	Word storeAddr;
 	if (IndirectMode(instr)){
@@ -149,18 +168,46 @@ void IblisVM::Store(std::shared_ptr<Thread> t, Word instr)
 	t->m()[storeAddr] = t->m()[RegC(instr)];
 }
 
-void IblisVM::Copy(std::shared_ptr<Thread> t, Word instr)
+void IblisVM::Copy(ThreadP t, Word instr)
 {
 	t->r()[RegB(instr)] = t->r()[RegC(instr)];
 }
 
-void IblisVM::Const(std::shared_ptr<Thread> t, Word instr)
+void IblisVM::push_impl(ThreadP t, Word stackRegister, Word value)
+{
+	t->m(t->r(stackRegister)) = value;
+	t->r(stackRegister)--;
+}
+
+Word IblisVM::pop_impl(ThreadP t, Word stackRegister)
+{
+	t->r(stackRegister)++;
+	return t->m(t->r(stackRegister));
+}
+
+void IblisVM::Push(ThreadP t, Word instr)
+{
+	Word b = RegB(instr);
+	Word c = RegC(instr);
+	
+	push_impl(t, c, t->r(b));
+}
+
+void IblisVM::Pop(ThreadP t, Word instr)
+{
+	Word b = RegB(instr);
+	Word c = RegC(instr);
+
+	t->r(b) = pop_impl(t, c);
+}
+
+void IblisVM::Const(ThreadP t, Word instr)
 {
 	Word value = ConstLiteral18(instr);
 	t->r()[RegC(instr)] = value;
 }
 
-void IblisVM::Arithmetic(std::shared_ptr<Thread> t, Word instr)
+void IblisVM::Arithmetic(ThreadP t, Word instr)
 {
 	Word a, b;
 	if (LiteralA(instr)){
@@ -216,7 +263,7 @@ void IblisVM::Arithmetic(std::shared_ptr<Thread> t, Word instr)
 	t->r()[RegC(instr)] = res;
 }
 
-void IblisVM::Jump(std::shared_ptr<Thread> t, Word instr)
+void IblisVM::Jump(ThreadP t, Word instr)
 {
 	if (IndirectMode(instr)){
 		t->ip() = t->r()[RegC(instr)];
@@ -226,7 +273,7 @@ void IblisVM::Jump(std::shared_ptr<Thread> t, Word instr)
 	}
 }
 
-void IblisVM::JumpTrue(std::shared_ptr<Thread> t, Word instr)
+void IblisVM::JumpTrue(ThreadP t, Word instr)
 {
 	Word jumpAddr;
 	
@@ -245,7 +292,22 @@ void IblisVM::JumpTrue(std::shared_ptr<Thread> t, Word instr)
 	}
 }
 
-void IblisVM::Fork(std::shared_ptr<Thread> t, Word instr)
+void IblisVM::Call(ThreadP t, Word instr)
+{
+	Word jumpAddr;
+	
+	if (IndirectMode(instr)){
+		jumpAddr = t->r(RegB(instr));
+	}
+	else {
+		jumpAddr = Addr(instr);
+	}
+	
+	push_impl(t, RegC(instr), t->ip() + 1);
+	t->ip() = jumpAddr;
+}
+
+void IblisVM::Fork(ThreadP t, Word instr)
 {
 	Word segment = RegC(instr);
 	
