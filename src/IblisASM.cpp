@@ -118,30 +118,33 @@ struct AsmGrammar : qi::grammar<Iterator, ast::Program(), SkipType>
 		directive.add
 			(".locate", ast::Directive::LOCATE)
 			(".def", ast::Directive::DEF);
+			
+		label = qi::lexeme[ ( ( alpha | char_('_') ) >> *( alnum | char_('_') ) )  - no_case[opcode] ];
 		
-		//(ascii::alpha | char_('_'))
-		
-		label = qi::lexeme[ ( ( alpha | char_('_') ) >> *( alnum | char_('_') ) ) - no_case[opcode]];
-		
-		index_expr = boost::spirit::int_ |
-					 boost::spirit::hex |
-					 label;
+		index_expr = label |
+					 boost::spirit::int_ |
+					 boost::spirit::hex;
+					 
 		
 		reg_ref = "r[" > index_expr > ']';
 		
 		arg = index_expr | reg_ref;
 		
+		arg_list = arg % ',';
+		
 		pseudo_op = qi::lexeme[no_case[opcode | directive]];
 		
-		instruction = ( -(label > ':') ) >> ( pseudo_op > (arg % ',') ) >> (eol | eoi);
+		instruction = ( -(label > ':') ) >> ( pseudo_op >> arg_list ) >> (eol | eoi);
 		
 		program = +instruction;
+		
 		
 		//===============error handling================
 		label.name("label");
 		index_expr.name("index_expr");
 		reg_ref.name("reg_ref");
 		arg.name("arg");
+		arg_list.name("arg_list");
 		pseudo_op.name("pseudo");
 		instruction.name("instr");
 		program.name("asm_program");
@@ -150,6 +153,7 @@ struct AsmGrammar : qi::grammar<Iterator, ast::Program(), SkipType>
 		BOOST_SPIRIT_DEBUG_NODE(index_expr);
 		BOOST_SPIRIT_DEBUG_NODE(reg_ref);
 		BOOST_SPIRIT_DEBUG_NODE(arg);
+		BOOST_SPIRIT_DEBUG_NODE(arg_list);
 		BOOST_SPIRIT_DEBUG_NODE(pseudo_op);
 		BOOST_SPIRIT_DEBUG_NODE(instruction);
 		BOOST_SPIRIT_DEBUG_NODE(program);
@@ -158,6 +162,7 @@ struct AsmGrammar : qi::grammar<Iterator, ast::Program(), SkipType>
 		qi::on_error<qi::fail>(instruction, error_handler(_4, _3, _2));
 		qi::on_error<qi::fail>(pseudo_op, error_handler(_4, _3, _2));
 		qi::on_error<qi::fail>(arg, error_handler(_4, _3, _2));
+		qi::on_error<qi::fail>(arg_list, error_handler(_4, _3, _2));
 		qi::on_error<qi::fail>(reg_ref, error_handler(_4, _3, _2));
 		qi::on_error<qi::fail>(index_expr, error_handler(_4, _3, _2));
 		qi::on_error<qi::fail>(label, error_handler(_4, _3, _2));
@@ -169,6 +174,7 @@ struct AsmGrammar : qi::grammar<Iterator, ast::Program(), SkipType>
 	qi::rule<Iterator, ast::IndexExpression(), SkipType> index_expr;
 	qi::rule<Iterator, ast::RegisterReference(), SkipType> reg_ref;
 	qi::rule<Iterator, ast::Argument(), SkipType> arg;
+	qi::rule<Iterator, ast::ArgList(), SkipType> arg_list;
 	qi::rule<Iterator, ast::PseudoOp(), SkipType> pseudo_op;
 	qi::rule<Iterator, ast::Instruction(), SkipType> instruction;
 	qi::rule<Iterator, ast::Program(), SkipType> program;
@@ -186,10 +192,12 @@ Assembler::Assembler(std::string& source) :
 	labelAddress()
 {
 	AsmGrammar<std::string::const_iterator, AsmSkipper<std::string::const_iterator> > grammar;
+	//AsmGrammar<std::string::const_iterator, ascii::space_type> grammar;
 	std::string::const_iterator iter = source.begin();
     std::string::const_iterator end = source.end();
 		
 	bool parsed = qi::phrase_parse(iter, end, grammar, AsmSkipper<std::string::const_iterator>(), parsedProgram);
+	//bool parsed = qi::phrase_parse(iter, end, grammar, ascii::space, parsedProgram);
 	
 	if (!parsed || iter != end){
 		

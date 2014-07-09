@@ -67,6 +67,8 @@ struct RegisterReference {
  */
 typedef ::boost::variant<nil, RegisterReference, IndexExpression> Argument;
 
+typedef std::list<Argument> ArgList;
+
 /**
  * Either an operation, or a directive.
  */
@@ -78,7 +80,7 @@ typedef ::boost::variant<nil, ::iblis::Op, Directive> PseudoOp;
 struct Instruction {
 	::boost::optional<Label> label;
 	PseudoOp op;
-	std::list<Argument> args;
+	ArgList args;
 };
 
 typedef std::vector<Instruction> Program;
