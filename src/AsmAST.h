@@ -59,8 +59,13 @@ typedef ::boost::variant<nil, int, unsigned int, Label> IndexExpression;
  * Reference to a register.
  */
 struct RegisterReference {
+	char r;
 	IndexExpression indexExpr;
 };
+template <typename OUT>
+inline OUT& operator<<(OUT& out, const RegisterReference& r){
+	return out << "r[" << r.indexExpr << "]";
+}
 
 /**
  * An argument to an operation or directive.
@@ -91,6 +96,7 @@ typedef std::vector<Instruction> Program;
 
 BOOST_FUSION_ADAPT_STRUCT(
 		::iblis::ast::RegisterReference,
+		(char, r)
 		(::iblis::ast::IndexExpression, indexExpr)
 		)
 

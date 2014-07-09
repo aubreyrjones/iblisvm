@@ -119,22 +119,25 @@ struct AsmGrammar : qi::grammar<Iterator, ast::Program(), SkipType>
 			(".locate", ast::Directive::LOCATE)
 			(".def", ast::Directive::DEF);
 			
-		label = qi::lexeme[ ( ( alpha | char_('_') ) >> *( alnum | char_('_') ) )  - no_case[opcode] ];
+		label = !no_case[opcode] >> 
+				qi::lexeme[ ( ( alpha | char_('_') ) >> *( alnum | char_('_') ) ) ];
 		
 		index_expr = label |
 					 boost::spirit::int_ |
 					 boost::spirit::hex;
 					 
 		
-		reg_ref = "r[" > index_expr > ']';
+		reg_ref = char_('r') > "[" > index_expr > ']';
 		
-		arg = index_expr | reg_ref;
+		arg = reg_ref | index_expr;
 		
 		arg_list = arg % ',';
 		
 		pseudo_op = qi::lexeme[no_case[opcode | directive]];
 		
-		instruction = ( -(label > ':') ) >> ( pseudo_op >> arg_list ) >> (eol | eoi);
+		instruction = ( -(label > ':') ) >> 
+					  ( pseudo_op >> arg_list ) 
+					  > (eol | eoi);
 		
 		program = +instruction;
 		
