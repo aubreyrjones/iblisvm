@@ -127,7 +127,7 @@ struct AsmGrammar : qi::grammar<Iterator, ast::Program(), SkipType>
 					 boost::spirit::hex;
 					 
 		
-		reg_ref = char_('r') > "[" > index_expr > ']';
+		reg_ref = char_('r') >> "[" > index_expr > ']';
 		
 		arg = reg_ref | index_expr;
 		
@@ -135,11 +135,11 @@ struct AsmGrammar : qi::grammar<Iterator, ast::Program(), SkipType>
 		
 		pseudo_op = qi::lexeme[no_case[opcode | directive]];
 		
-		instruction = ( -(label > ':') ) >> 
-					  ( pseudo_op >> arg_list ) 
+		instruction = ( -(label > ':') ) 
+					  >> ( pseudo_op >> arg_list ) 
 					  > (eol | eoi);
 		
-		program = +instruction;
+		program = +instruction >> qi::omit[ *ascii::space ];
 		
 		
 		//===============error handling================
