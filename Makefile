@@ -12,3 +12,10 @@ release:
 
 deps:
 	./scons.py --dry-run --tree=prune
+
+
+android:
+	./scons.py -f Android.scons -j 4
+
+cleandroid:
+	./scons.py -f Android.scons -c

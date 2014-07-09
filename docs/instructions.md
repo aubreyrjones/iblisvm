@@ -200,8 +200,14 @@ CONST - Load a literal value into a register.
 
 JUMP - Unconditional jump.
 
-    (addr) : jump to the given address literal
-    (regC) : jump to the address stored in regC.
+    (addr) : jump to the given address literal. Note: This instruction
+    variant is assembled as a TYPE A instruction, with mode=0, and the
+    jump address encoded in the address field.
+
+    (regC) : jump to the address stored in regC. Note: This
+    instruction variant is assembled as a TYPE A instruction, with
+    mode=1, and the register containing the jump address in regC.
+    
 
 JUMP IF TRUE - Conditional jump.
 
@@ -215,12 +221,15 @@ CALL - Push IP to the stack, and jump.
 
 RETURN - Return from a CALL instruction.
 
-    Unnecessary. Use: POP r[0], regC;
+    Unnecessary. Use: POP r[0], regC; where regC is your stack
+    pointer.
 
 FORK -
 
     (addr, segment) : spawn a new thread in the given local segment,
-    with initial instruction pointer value equal to addr.
+    with initial instruction pointer value equal to addr. Note: This
+    instruction is assembled as a TYPE A instruction, with mode=0, and
+    the segment index contained in the regC field.
 
 
 

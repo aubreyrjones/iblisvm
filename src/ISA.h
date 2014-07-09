@@ -65,6 +65,38 @@ enum class Op : Word
 	ILLEGAL = 32
 };
 
+
+template <typename OUT>
+inline OUT& operator<<(OUT& out, Op op){
+	switch (op){
+		case Op::NOP: return out << "NOP";
+		case Op::LOAD: return out << "LOAD";
+		case Op::LOAD_PEER: return out << "LOAD_PEER";
+		case Op::STORE: return out << "STORE";
+		case Op::STORE_PEER: return out << "STORE_PEER";
+		case Op::PUSH: return out << "PUSH";
+		case Op::POP: return out << "POP";
+		case Op::COPY: return out << "COPY";
+		case Op::CONST: return out << "CONST";
+		case Op::ADD: return out << "ADD";
+		case Op::SUB: return out << "SUB";
+		case Op::MUL: return out << "MUL";
+		case Op::DIV: return out << "DIV";
+		case Op::MOD: return out << "MOD";
+		case Op::CEQ: return out << "CEQ";
+		case Op::CL: return out << "CL";
+		case Op::CLE: return out << "CLE";
+		case Op::CG: return out << "CG";
+		case Op::CGE: return out << "CGE";
+		case Op::JUMP: return out << "JUMP";
+		case Op::JUMP_TRUE: return out << "JUMP_TRUE";
+		case Op::CALL: return out << "CALL";
+		case Op::FORK: return out << "FORK";
+		default: return out << "ILLEGAL";
+	}
+	
+}
+
 enum class ExeStatus
 {
 	OK = 0,

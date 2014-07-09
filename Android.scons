@@ -1,0 +1,50 @@
+import os.path
+import os
+import platform
+from BuildID import *
+from Common import *
+
+################ USER ENVIRONMENT #################
+
+# Get the android tools root directory.
+android_dir = None
+with open('ANDROID_ROOT.user', 'r') as cfg_file:
+    android_dir = cfg_file.read().strip()
+
+def droid_tool(name):
+    return os.path.join(os.path.join(android_dir, 'bin'), "arm-linux-androideabi-" + name)
+
+###
+# Set up and build.
+###
+VAR_DIR_NAME = os.path.realpath("../iblis_vm_droid")
+VariantDir(VAR_DIR_NAME, '.')
+
+def varsub(*d):
+    return os.path.join(VAR_DIR_NAME, d)
+
+core_env = Environment(tools=['default','textfile'],
+                       CPPPATH = ['#include', os.path.join(android_dir, "sysroot", "usr", "include")],
+                       CC = droid_tool('gcc'),
+                       CXX = droid_tool('g++'),
+                       AR = droid_tool('ar'),
+                       AS = droid_tool('as'),
+                       LIBPATH = os.path.join(android_dir, "sysroot", "usr", "lib"),
+                       )
+core_env.AddMethod(filtered_glob, "FilteredGlob")
+core_env['ANDROID_BUILD_DIR'] = VAR_DIR_NAME
+
+# Find the build type and platform.
+build_type = ARGUMENTS.get('mode', 'debug')
+build_platform = "android"
+
+# set up our compiler flags.
+core_env.AppendUnique(CCFLAGS = Split("-fPIC -pthread -march=armv7-a -marm -mfloat-abi=softfp -mfpu=vfpv3-d16"))
+core_env.AppendUnique(CXXFLAGS = Split("-std=c++11 -lgnustl_shared"))
+core_env.AppendUnique(CPPDEFINES = ['TALIS_ANDROID'])
+
+iblis_sources = core_env.Glob("../iblis_vm_droid/src/*.cpp")
+iblis_objects = core_env.Object(iblis_sources)
+
+iblis_library = core_env.Library("../iblis_vm_droid/iblisVM", iblis_objects)
+

@@ -14,7 +14,7 @@ def prefix_with(prefix):
 # Set up the CORE environment, which captures as much platform-specific
 # information as it possibly can.
 ###
-core_env = Environment(tools=['default','textfile'], CPPPATH=['#include'])
+core_env = Environment(tools=['default','textfile'], CPPPATH=['#include', '/home/netzapper/include'])
 core_env.AddMethod(filtered_glob, "FilteredGlob")
 
 # Find the build type and platform.
@@ -53,8 +53,8 @@ if build_platform == 'linux':
 elif build_platform == 'win':
     core_env.AppendUnique(LIBPATH = ['#lib/windows'])
 
-iblis_sources = core_env.Glob("#src/*.cpp")
+iblis_sources = core_env.FilteredGlob("#src/*.cpp", ["ivm.cpp"])
 iblis_objects = core_env.Object(iblis_sources)
 
 iblis_library = core_env.Library("iblisVM", iblis_objects)
-
+ivm_program = core_env.Program("ivm", ["src/ivm.cpp"] + iblis_objects)
