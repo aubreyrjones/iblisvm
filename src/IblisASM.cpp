@@ -119,8 +119,9 @@ struct AsmGrammar : qi::grammar<Iterator, ast::Program(), SkipType>
 			(".locate", ast::Directive::LOCATE)
 			(".def", ast::Directive::DEF);
 			
-		label = !no_case[opcode] >> 
-				qi::lexeme[ ( ( alpha | char_('_') ) >> *( alnum | char_('_') ) ) ];
+		id_rule = qi::lexeme[ ( ( alpha | char_('_') ) >> *( alnum | char_('_') ) ) ];
+		
+		label = (!opcode >> id_rule);
 		
 		index_expr = label |
 					 boost::spirit::int_ |
@@ -135,11 +136,11 @@ struct AsmGrammar : qi::grammar<Iterator, ast::Program(), SkipType>
 		
 		pseudo_op = qi::lexeme[no_case[opcode | directive]];
 		
-		instruction = ( -(label > ':') ) 
+		instruction = ( -(label > ':' >> qi::omit[ *ascii::space ]) ) 
 					  >> ( pseudo_op >> arg_list ) 
 					  > (eol | eoi);
 		
-		program = +instruction >> qi::omit[ *ascii::space ];
+		program = qi::omit[ *ascii::space ] >> +(instruction >> qi::omit[ *ascii::space ]) >> qi::omit[ *ascii::space ];
 		
 		
 		//===============error handling================
@@ -173,6 +174,7 @@ struct AsmGrammar : qi::grammar<Iterator, ast::Program(), SkipType>
 		
 	}
 	
+	qi::rule<Iterator, std::string(), SkipType> id_rule;
 	qi::rule<Iterator, ast::Label(), SkipType> label;
 	qi::rule<Iterator, ast::IndexExpression(), SkipType> index_expr;
 	qi::rule<Iterator, ast::RegisterReference(), SkipType> reg_ref;
