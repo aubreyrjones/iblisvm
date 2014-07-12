@@ -194,7 +194,9 @@ struct AsmGrammar : qi::grammar<Iterator, ast::Program(), SkipType>
 
 Assembler::Assembler(std::string& source) :
 	parsedProgram(),
-	labelAddress()
+	labelAddress(),
+	ip(0),
+	expr_eval(this)
 {
 	AsmGrammar<std::string::const_iterator, AsmSkipper<std::string::const_iterator> > grammar;
 	//AsmGrammar<std::string::const_iterator, ascii::space_type> grammar;
@@ -213,20 +215,225 @@ Assembler::Assembler(std::string& source) :
 		std::cout << "-------------------------\n";
         
 		
-		throw ParseException();
+		throw ParseException("error");
 	}
 	
 	std::cout << parsedProgram.size() << " instructions.\n";
 }
 
-void Assembler::EncodeInstruction(ast::Instruction& instr)
+void Assembler::EncodeOperation(ast::Instruction& instr)
 {
-	if (!instr.IsOperation()){
+	if (instr.op.type() == typeid(ast::Directive) ){
 		return;
 	}
 	
-	instr.encodedOp = EncodeOp(boost::get<Op>(instr.op));
+	Op op = boost::get<Op>(instr.op);
+	instr.encodedOp = EncodeOp(op);
+	
+	if (OneArg(op)){ //we're a jump
+		if (instr.ArgB()){ //exactly one argument
+			throw ArgumentException("Only one argument expected.");
+		}
+		
+		if (ast::IsRegister(instr.ArgC())){
+			instr.encodedOp |= IBLIS_LS_MODE_BIT;
+		}
+	}
+	else if (ThreeArgs(op)){
+		if (!instr.ArgA() || !instr.ArgB()){
+			throw ArgumentException("Three arguments expected.");
+		}
+				
+		if (!ast::IsRegister(instr.ArgC())){
+			throw EncodeException("C must be a register for arithmetic/compare operations.");
+		}
+		
+		if (!ast::IsRegister(instr.ArgA().get())){
+			instr.encodedOp |= IBLIS_LIT_A_BIT;
+		}
+		
+		if (!ast::IsRegister(instr.ArgB().get())){
+			instr.encodedOp |= IBLIS_LIT_B_BIT;
+		}
+	}
+	else {
+		if (!instr.ArgB() || instr.ArgA()){ //exactly two arguments
+			throw ArgumentException("Two arguments expected, got three.");
+		}
+		
+		if (ast::IsRegister(instr.ArgB().get())){
+			if (op == Op::CONST){
+				throw ArgumentException("Argument B for CONST cannot be a register.");
+			}
+			instr.encodedOp |= IBLIS_LS_MODE_BIT;
+		}
+		else {
+			if (op == Op::PUSH || op == Op::POP || op == Op::COPY){
+				throw EncodeException("Argument B for PUSH/POP/COPY must be a register.");
+			}
+		}
+	}
 }
+
+Word Assembler::EvaluateExpression(ast::IndexExpression& expr)
+{
+	return boost::apply_visitor(expr_eval, expr);
+}
+
+Word Assembler::EvaluateArgument(ast::Argument& arg)
+{
+	if (arg.type() == typeid(ast::RegisterReference)){
+		return EvaluateExpression(boost::get<ast::RegisterReference>(arg).indexExpr);
+	}
+	return EvaluateExpression(boost::get<ast::IndexExpression>(arg));
+}
+
+void Assembler::RegisterLabel(const ast::Label& name, const Word& address)
+{
+	if (labelAddress.find(name) != labelAddress.end()){
+		throw LabelConflict("conflict");
+	}
+	
+	labelAddress.insert(LabelMap::value_type(name, address));
+}
+
+void Assembler::ExecuteDirective(ast::Instruction& instr)
+{
+	switch (boost::get<ast::Directive>(instr.op)){
+	case ast::Directive::DEF:
+		if (!instr.ArgB() || instr.ArgB().get().type() != typeid(ast::Label)){
+			throw ArgumentException(".def <name>, <literal>");
+		}
+		
+		if (instr.ArgC().type() == typeid(ast::RegisterReference)){
+			throw ArgumentException(".def cannot assign registers.");
+		}
+		
+		RegisterLabel(boost::get<ast::Label>(instr.ArgB().get()), 
+					  EvaluateExpression(boost::get<ast::IndexExpression>(instr.ArgC())));
+		
+		break;
+	
+	case ast::Directive::LOCATE:
+		if (instr.ArgC().type() == typeid(ast::RegisterReference)){
+			throw ArgumentException(".locate <literal>");
+		}
+		
+		ip = EvaluateExpression(boost::get<ast::IndexExpression>(instr.ArgC()));
+		break;
+	}
+}
+
+void Assembler::ScanAndFix()
+{
+	ip = 0;
+	for (ast::Instruction& instr : parsedProgram){		
+		if (instr.label){
+			RegisterLabel(instr.label.get(), ip);
+		}
+		
+		if (instr.op.type() == typeid(ast::Directive)){
+			ExecuteDirective(instr);
+			continue;
+		}
+		
+		EncodeOperation(instr);
+		
+		instr.address = ip++;
+	}
+}
+
+void Assembler::ResolveArguments()
+{
+	for (ast::Instruction& instr : parsedProgram){
+		if (instr.op.type() != typeid(Op)){
+			continue;
+		}
+		
+		ast::OptionalArg a(instr.ArgA());
+		ast::OptionalArg b(instr.ArgB());
+		ast::Argument& c = instr.ArgC();
+		
+		Op op = boost::get<Op>(instr.op);
+		
+		if (op == Op::JUMP){ //only op with optional ArgC.
+			if (ast::IsRegister(c)){
+				instr.encodedInstruction = 
+					instr.encodedOp | 
+					EncodeC(EvaluateArgument(c));
+			}
+			else {
+				instr.encodedInstruction =
+					instr.encodedOp |
+					EncodeAddr(EvaluateArgument(c));
+			}
+		}
+		else if (ThreeArgs(op)){
+			if (!a || !b){
+				throw ArgumentException("Expected three arguments.");
+			}
+			
+			if (!ast::IsRegister(c)){
+				throw ArgumentException("C must be a register.");
+			}
+			
+			instr.encodedInstruction = instr.encodedOp |
+				EncodeA(EvaluateArgument(a.get())) |
+				EncodeB(EvaluateArgument(b.get())) |
+				EncodeC(EvaluateArgument(c));
+		}
+		else {
+			if (!b){
+				throw ArgumentException("Expected two arguments, got one.");
+			}
+			if (a){
+				throw ArgumentException("Expected two arguments, got three.");
+			}
+			
+			if (ast::IsRegister(b.get())){
+				instr.encodedInstruction = instr.encodedOp |
+					EncodeB(EvaluateArgument(b.get())) |
+					EncodeC(EvaluateArgument(c));
+			}
+			else {
+				instr.encodedInstruction = instr.encodedOp |
+					EncodeAddr(EvaluateArgument(b.get())) |
+					EncodeC(EvaluateArgument(c));
+			}
+		}
+	}
+}
+
+void Assembler::Assemble()
+{
+	ScanAndFix();
+	ResolveArguments();
+}
+
+//================
+ExpressionEvaluator::ExpressionEvaluator(Assembler* as) : as(as) {}
+
+ExpressionEvaluator::result_type ExpressionEvaluator::operator()(ast::nil& nil){
+	return 0;
+}
+
+ExpressionEvaluator::result_type ExpressionEvaluator::operator()(int& i){
+	return *(reinterpret_cast<Word*>(&i));
+}
+
+ExpressionEvaluator::result_type ExpressionEvaluator::operator()(unsigned int& i){
+	return i;
+}
+
+ExpressionEvaluator::result_type ExpressionEvaluator::operator()(ast::Label& label){
+	if (as->labelAddress.find(label) == as->labelAddress.end()){
+		throw UnknownLabel("unknown");
+	}
+	
+	return as->labelAddress[label];
+}
+//================
+
 
 
 } //namespace iblis

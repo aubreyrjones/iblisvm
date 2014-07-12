@@ -94,7 +94,6 @@ inline OUT& operator<<(OUT& out, Op op){
 		case Op::FORK:			return out << "FORK";
 		default:				return out << "ILLEGAL";
 	}
-	
 }
 
 enum class ExeStatus
@@ -103,6 +102,28 @@ enum class ExeStatus
 	ILLEGAL_OP,
 	SEGFAULT
 };
+
+inline bool OneArg(const Op& op){
+	return op == Op::JUMP;
+}
+
+inline bool ThreeArgs(const Op& op){
+	switch (op){
+		case Op::ADD:
+		case Op::SUB:
+		case Op::MUL:
+		case Op::DIV:
+		case Op::MOD:
+		case Op::CEQ:
+		case Op::CL:
+		case Op::CLE:
+		case Op::CG:
+		case Op::CGE:
+			return true;
+	}
+	
+	return false;
+}
 
 /**
  * Decode an operation from a word.
@@ -161,7 +182,7 @@ inline Word Addr(const Word& i)
  * Encode an 18-bit address/literal.
  */
 inline Word EncodeAddr(const Word& addr){
-	return addr << 8;
+	return (addr << 8) & IBLIS_LS_ADDR_MASK;
 }
 
 /**
@@ -201,6 +222,19 @@ inline Word RegB(const Word& i)
 inline Word RegC(const Word& i)
 {
 	return i & IBLIS_REG_C;
+}
+
+inline Word EncodeA(const Word& a)
+{
+	return (a & 0xff) << 16;
+}
+
+inline Word EncodeB(const Word& b){
+	return (b & 0xff) << 8;
+}
+
+inline Word EncodeC(const Word& c){
+	return c & 0xff;
 }
 
 }

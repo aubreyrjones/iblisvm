@@ -41,13 +41,13 @@ static option::ArgStatus ArgRequired(const option::Option& option, bool msg)
     return option::ARG_ILLEGAL;
 }
 
-enum OptionIndex {HELP, ASM_FILE};
+enum OptionIndex {HELP, ASM_FILE, PRINT_HEX};
 const option::Descriptor usage[] = {
 	{HELP, 0, "h", "help", option::Arg::None, "-h\t --help\t Get usage help."},
 	{ASM_FILE, 0, "a", "asm_file", ArgRequired, "-a\t --asm_file\t File to assemble."},
+	{PRINT_HEX, 0, "H", "print_hex", option::Arg::None, "-H\t --print_hex\t Print the hex dump of the assembled file."},
 	{0, 0, 0, 0, 0, 0}
 };
-
 
 //==================== MAIN =====================================
 int main(int argc, char **argv)
@@ -71,8 +71,15 @@ int main(int argc, char **argv)
 	//===== handle requested operations =====
 	if (options[ASM_FILE]){
 		iblis::Assembler *as = AssembleFile(options[ASM_FILE].arg);
+		
+		as->Assemble();
+		
 		for (iblis::ast::Instruction i : as->GetProgram()){
-			std::cout << i;
+			printf("%.8x: ", i.address);
+			if (options[PRINT_HEX]){
+				printf("(%.8x)\t", i.encodedInstruction);
+			}
+			std::cout << i << "\n";
 		}
 	}
 	

@@ -61,10 +61,16 @@ struct RegisterReference {
  */
 typedef ::boost::variant<nil, RegisterReference, IndexExpression> Argument;
 
+inline bool IsRegister(const Argument& arg){
+	return arg.type() == typeid(RegisterReference);
+}
+
 /**
  * A list of arguments to a pseudo op.
  */
-typedef std::list<Argument> ArgList;
+typedef std::vector<Argument> ArgList;
+
+typedef ::boost::optional<Argument&> OptionalArg;
 
 /**
  * Either an operation, or a directive.
@@ -89,10 +95,35 @@ struct Instruction {
 	/** The complete encoded instruction, including arguments. */
 	::iblis::Word encodedInstruction;
 	
-	/** Does this instruction represent a real operation, or just
-	 *  a directive? */
-	inline bool IsOperation(){
-		return op.which() < 2;
+	/**
+	 * Gets A, if it exists.
+     */
+	OptionalArg ArgA(){
+		if (args.size() == 3){
+			return OptionalArg(args.front());
+		}
+		return OptionalArg();
+	}
+	
+	/**
+	 * Gets B, if it exists.
+     */
+	OptionalArg ArgB(){
+		if (args.size() == 3){
+			return OptionalArg(args[1]);
+		}
+		else if (args.size() == 2){
+			return OptionalArg(args.front());
+		}
+		
+		return OptionalArg();
+	}
+	
+	/**
+	 * Gets C.
+     */
+	Argument& ArgC(){
+		return args.back();
 	}
 };
 
@@ -168,9 +199,10 @@ inline OUT& operator<<(OUT& out, const Instruction& i)
 		out << i.label.get() << ":\t";
 	}
 	else {
-		out << "\t";
+		out << " \t";
 	}
-	return boost::apply_visitor(VariantPrinter<OUT>(out), i.op) << " " << i.args << "\n";
+	
+	return boost::apply_visitor(VariantPrinter<OUT>(out), i.op) << "\t" << i.args;
 }
 
 
@@ -188,7 +220,7 @@ BOOST_FUSION_ADAPT_STRUCT(
 		iblis::ast::Instruction,
 		(::boost::optional<::iblis::ast::Label>, label)
 		(::iblis::ast::PseudoOp, op)
-		(std::list<::iblis::ast::Argument>, args)
+		(::iblis::ast::ArgList, args)
 		)
 
 #endif	/* ASMAST_H */

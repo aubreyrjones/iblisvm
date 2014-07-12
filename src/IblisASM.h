@@ -16,10 +16,71 @@
 
 namespace iblis {
 
-class ParseException : public std::exception
+class ASMException : public std::exception
 {
+public:
+	const char* err;
+
+	ASMException(const char* err) : err(err) {}
 	
+	virtual const char* what() const noexcept
+	{
+		return err;
+	}
 };
+
+class ParseException : public ASMException
+{
+public:
+	ParseException(const char* err) : ASMException(err) {}
+};
+
+class EncodeException : public ASMException
+{
+public:
+	EncodeException(const char* err) : ASMException(err) {}
+};
+
+class ArgumentException : public ASMException
+{
+public:
+	ArgumentException(const char* err) : ASMException(err) {}
+};
+
+
+
+class LabelConflict : public ASMException
+{
+public:
+	LabelConflict(const char* err) : ASMException(err) {}
+};
+
+class UnknownLabel : public ASMException
+{
+public:
+	UnknownLabel(const char* err) : ASMException(err) {}
+};
+
+class Assembler; //forward declaration
+/** Used to visit the boost::variant expressions. */
+class ExpressionEvaluator : public boost::static_visitor<>
+{
+	Assembler* as;
+public:
+	typedef Word result_type;
+	
+	ExpressionEvaluator(Assembler* as);
+	
+	result_type operator()(ast::nil& nil);
+	
+	result_type operator()(int& i);
+	
+	result_type operator()(unsigned int& i);
+	
+	result_type operator()(ast::Label& label);
+};
+
+typedef std::map<ast::Label, Word> LabelMap;
 
 /**
  * Create a new assembler object.
@@ -27,6 +88,8 @@ class ParseException : public std::exception
  * This will automatically parse the assembly source given.
  */
 class Assembler {
+	friend class ExpressionEvaluator;
+protected:
 	/**
 	 * The AST for the program.
 	 */
@@ -35,12 +98,43 @@ class Assembler {
 	/**
 	 * All labels contained in this program.
 	 */
-	std::map<std::string, Word> labelAddress;
+	LabelMap labelAddress;
+	
+	/**
+	 * Instruction pointer for assembling.
+	 */
+	Word ip;
+	
+	ExpressionEvaluator expr_eval;
+	
+	/**
+	 * Evaluate the given expression.
+     */
+	Word EvaluateExpression(ast::IndexExpression& expr);
+	
+	Word EvaluateArgument(ast::Argument& arg);
 	
 	/**
 	 * Encode the given instruction.
      */
-	void EncodeInstruction(ast::Instruction& instr);
+	void EncodeOperation(ast::Instruction& instr);
+	
+	/** Register a new label, raising an exception if already defined. */
+	void RegisterLabel(const ast::Label& name, const Word& address);
+	
+	/** Immediately execute the given directive. */
+	void ExecuteDirective(ast::Instruction& instr);
+	
+	/**
+	 * Scans all instructions for labels, evaluates directives,
+	 * and fixes instructions in place.
+     */
+	void ScanAndFix();
+	
+	/**
+	 * Resolves the arguments for each instruction.
+	 */
+	void ResolveArguments();
 	
 public:
 	Assembler(std::string& source);
@@ -49,7 +143,10 @@ public:
 	{
 		return parsedProgram;
 	}
+	
+	void Assemble();
 };
+
 
 } //namespace iblis
 
