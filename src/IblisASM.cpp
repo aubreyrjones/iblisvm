@@ -91,29 +91,29 @@ struct AsmGrammar : qi::grammar<Iterator, ast::Program(), SkipType>
         qi::_4_type _4;
 		
 		opcode.add
-			("nop", Op::NOP)
-			("load", Op::LOAD)
-			("loadp", Op::LOAD_PEER)
-			("store", Op::STORE)
-			("storep", Op::STORE_PEER)
-			("push", Op::PUSH)
-			("pop", Op::POP)
-			("copy", Op::COPY)
-			("const", Op::CONST)
-			("add", Op::ADD)
-			("sub", Op::SUB)
-			("mul", Op::MUL)
-			("div", Op::DIV)
-			("mod", Op::MOD)
-			("ceq", Op::CEQ)
-			("cl", Op::CL)
-			("cle", Op::CLE)
-			("cg", Op::CG)
-			("cge", Op::CGE)
-			("jump", Op::JUMP)
-			("jumpt", Op::JUMP_TRUE)
-			("call", Op::CALL)
-			("fork", Op::FORK);
+			("nop",		Op::NOP)
+			("load",	Op::LOAD)
+			("loadp",	Op::LOAD_PEER)
+			("store",	Op::STORE)
+			("storep",	Op::STORE_PEER)
+			("push",	Op::PUSH)
+			("pop",		Op::POP)
+			("copy",	Op::COPY)
+			("const",	Op::CONST)
+			("add",		Op::ADD)
+			("sub",		Op::SUB)
+			("mul",		Op::MUL)
+			("div",		Op::DIV)
+			("mod",		Op::MOD)
+			("ceq",		Op::CEQ)
+			("cl",		Op::CL)
+			("cle",		Op::CLE)
+			("cg",		Op::CG)
+			("cge",		Op::CGE)
+			("jump",	Op::JUMP)
+			("jumpt",	Op::JUMP_TRUE)
+			("call",	Op::CALL)
+			("fork",	Op::FORK);
 		
 		directive.add
 			(".locate", ast::Directive::LOCATE)
@@ -121,11 +121,11 @@ struct AsmGrammar : qi::grammar<Iterator, ast::Program(), SkipType>
 			
 		id_rule = qi::lexeme[ ( ( alpha | char_('_') ) >> *( alnum | char_('_') ) ) ];
 		
-		label = (!opcode >> id_rule);
+		label = id_rule - pseudo_op;
 		
 		index_expr = label |
-					 boost::spirit::int_ |
-					 boost::spirit::hex;
+					 qi::lexeme[ "0x" > boost::spirit::hex] |
+					 qi::lexeme[boost::spirit::int_] ;
 					 
 		
 		reg_ref = char_('r') >> "[" > index_expr > ']';
@@ -134,9 +134,9 @@ struct AsmGrammar : qi::grammar<Iterator, ast::Program(), SkipType>
 		
 		arg_list = arg % ',';
 		
-		pseudo_op = qi::lexeme[no_case[opcode | directive]];
+		pseudo_op = qi::lexeme[no_case[opcode | directive] >> !ascii::alpha]; //qi::omit[ascii::space]];
 		
-		instruction = ( -(label > ':' >> qi::omit[ *ascii::space ]) ) 
+		instruction = ( -(label > ':') ) 
 					  >> ( pseudo_op >> arg_list ) 
 					  > (eol | eoi);
 		
@@ -153,14 +153,14 @@ struct AsmGrammar : qi::grammar<Iterator, ast::Program(), SkipType>
 		instruction.name("instr");
 		program.name("asm_program");
 		
-		BOOST_SPIRIT_DEBUG_NODE(label);
-		BOOST_SPIRIT_DEBUG_NODE(index_expr);
-		BOOST_SPIRIT_DEBUG_NODE(reg_ref);
-		BOOST_SPIRIT_DEBUG_NODE(arg);
-		BOOST_SPIRIT_DEBUG_NODE(arg_list);
-		BOOST_SPIRIT_DEBUG_NODE(pseudo_op);
-		BOOST_SPIRIT_DEBUG_NODE(instruction);
-		BOOST_SPIRIT_DEBUG_NODE(program);
+//		BOOST_SPIRIT_DEBUG_NODE(label);
+//		BOOST_SPIRIT_DEBUG_NODE(index_expr);
+//		BOOST_SPIRIT_DEBUG_NODE(reg_ref);
+//		BOOST_SPIRIT_DEBUG_NODE(arg);
+//		BOOST_SPIRIT_DEBUG_NODE(arg_list);
+//		BOOST_SPIRIT_DEBUG_NODE(pseudo_op);
+//		BOOST_SPIRIT_DEBUG_NODE(instruction);
+//		BOOST_SPIRIT_DEBUG_NODE(program);
 		
 		qi::on_error<qi::fail>(program, error_handler(_4, _3, _2));
 		qi::on_error<qi::fail>(instruction, error_handler(_4, _3, _2));
@@ -217,6 +217,15 @@ Assembler::Assembler(std::string& source) :
 	}
 	
 	std::cout << parsedProgram.size() << " instructions.\n";
+}
+
+void Assembler::EncodeInstruction(ast::Instruction& instr)
+{
+	if (!instr.IsOperation()){
+		return;
+	}
+	
+	instr.encodedOp = EncodeOp(boost::get<Op>(instr.op));
 }
 
 

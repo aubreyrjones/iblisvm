@@ -71,6 +71,9 @@ int main(int argc, char **argv)
 	//===== handle requested operations =====
 	if (options[ASM_FILE]){
 		iblis::Assembler *as = AssembleFile(options[ASM_FILE].arg);
+		for (iblis::ast::Instruction i : as->GetProgram()){
+			std::cout << i;
+		}
 	}
 	
 	

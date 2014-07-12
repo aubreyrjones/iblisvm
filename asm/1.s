@@ -1,5 +1,5 @@
         
-clear:  load 1,  12             ;comment
+test:   jump 0x2332
 
         
 test2:  store r[a], rabc        ;another comment

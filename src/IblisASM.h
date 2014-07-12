@@ -37,10 +37,15 @@ class Assembler {
 	 */
 	std::map<std::string, Word> labelAddress;
 	
+	/**
+	 * Encode the given instruction.
+     */
+	void EncodeInstruction(ast::Instruction& instr);
+	
 public:
 	Assembler(std::string& source);
 		
-	const ast::Program GetProgram() const
+	const ast::Program& GetProgram() const
 	{
 		return parsedProgram;
 	}
