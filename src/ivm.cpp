@@ -75,18 +75,18 @@ int main(int argc, char **argv)
 		
 		if (options[PRINT_ASM]){
 			for (iblis::ast::Instruction i : as->GetProgram()){	
-				std::cout << i << "\n";
+				std::cout << i.lineNumber << ":\t" << i << "\n";
 			}
 		}
 		
 		as->Assemble();
 		
-		for (iblis::ast::Instruction i : as->GetProgram()){
-			printf("%.8x: ", i.address);
-			if (options[PRINT_HEX]){
+		if (options[PRINT_HEX]){
+			for (iblis::ast::Instruction i : as->GetProgram()){
+				printf("%.8x: ", i.address);
 				printf("(%.8x)\t", i.encodedInstruction);
+				std::cout << i << "\n";
 			}
-			std::cout << i << "\n";
 		}
 	}
 	

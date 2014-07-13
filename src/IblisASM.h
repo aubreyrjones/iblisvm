@@ -69,6 +69,10 @@ protected:
      */
 	Word EvaluateExpression(ast::IndexExpression& expr);
 	
+	/**
+	 * Evaluates an argument. If it's a register reference, evaluates the
+	 * index expression WITHIN the register reference.
+     */
 	Word EvaluateArgument(ast::Argument& arg);
 	
 	/**

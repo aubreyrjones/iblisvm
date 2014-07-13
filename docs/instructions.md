@@ -187,7 +187,7 @@ CONST - Load a literal value into a register.
     (literal, regC) : stores the signed 18-bit literal in regC.
 
 
-[ADD, SUB, MUL, DIV, MOD] - Arithemetic operators.
+[ADD, SUB, MUL, DIV, MOD, SHL, SHR, AND, OR, XOR] - Arithemetic operators.
 
     (a, b, regC) : a or b may be either registers or 8-bit signed
     literals, performs the operation "regC = a . b" where '.' is
@@ -197,6 +197,11 @@ CONST - Load a literal value into a register.
 
     (a, b, regC) : a or b may be either registers or 8-bit signed
     literals, performs the operation "regC = (a . b) ? 1 : 0".
+
+NOT - Invert bits.
+
+    (regB, regC) : invert the bits in regB and store in regC.
+    (b, regc)    : invert the bits of literal b and store in regC.
 
 JUMP - Unconditional jump.
 

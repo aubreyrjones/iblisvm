@@ -53,11 +53,17 @@ enum class Op : Word
 	MUL,
 	DIV,
 	MOD,
+	SHL,
+	SHR,
+	AND,
+	OR,
+	XOR,
 	CEQ,
 	CL,
 	CLE,
 	CG,
 	CGE,
+	NOT,
 	JUMP,
 	JUMP_TRUE,
 	CALL,
@@ -83,11 +89,17 @@ inline OUT& operator<<(OUT& out, Op op){
 		case Op::MUL:			return out << "MUL";
 		case Op::DIV:			return out << "DIV";
 		case Op::MOD:			return out << "MOD";
+		case Op::SHL:			return out << "SHL";
+		case Op::SHR:			return out << "SHR";
+		case Op::AND:			return out << "AND";
+		case Op::OR:			return out << "OR";
+		case Op::XOR:			return out << "XOR";
 		case Op::CEQ:			return out << "CEQ";
 		case Op::CL:			return out << "CL";
 		case Op::CLE:			return out << "CLE";
 		case Op::CG:			return out << "CG";
 		case Op::CGE:			return out << "CGE";
+		case Op::NOT:			return out << "NOT";
 		case Op::JUMP:			return out << "JUMP";
 		case Op::JUMP_TRUE:		return out << "JUMPT";
 		case Op::CALL:			return out << "CALL";
@@ -114,12 +126,19 @@ inline bool ThreeArgs(const Op& op){
 		case Op::MUL:
 		case Op::DIV:
 		case Op::MOD:
+		case Op::SHL:
+		case Op::SHR:
+		case Op::AND:
+		case Op::OR:
+		case Op::XOR:
 		case Op::CEQ:
 		case Op::CL:
 		case Op::CLE:
 		case Op::CG:
 		case Op::CGE:
 			return true;
+    default:
+        return false;
 	}
 	
 	return false;
@@ -131,14 +150,14 @@ inline bool ThreeArgs(const Op& op){
 inline Op DecodeOp(const Word& i)
 {
 	Word op = i & IBLIS_OP_MASK;
-	return static_cast<Op>(op >> 26);
+	return static_cast<Op>(op >> 27);
 }
 
 /**
  * Encode an operation.
  */
 inline Word EncodeOp(const Op& op){
-	return static_cast<Word>(op) << 26;
+	return static_cast<Word>(op) << 27;
 }
 
 /**

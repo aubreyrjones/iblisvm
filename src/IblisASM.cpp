@@ -22,30 +22,28 @@ Assembler::Assembler(std::string& source) :
 	ip(0),
 	expr_eval(this)
 {
-	AsmGrammar<std::string::const_iterator, AsmSkipper<std::string::const_iterator> > grammar;
-	std::string::const_iterator iter = source.begin();
-    std::string::const_iterator end = source.end();
+	AsmGrammar<AsmLineIterator, AsmSkipper<AsmLineIterator> > grammar;
+	AsmLineIterator iter(source.begin());
+	AsmLineIterator end(source.end());
 		
-	bool parsed = qi::phrase_parse(iter, end, grammar, AsmSkipper<std::string::const_iterator>(), parsedProgram);
+	bool parsed = qi::phrase_parse(iter, end, grammar, AsmSkipper<AsmLineIterator>(), parsedProgram);
 	
 	if (!parsed || iter != end){
 		
 		std::string rest(iter, end);
 		std::cout << "\n-------------------------\n";
 		std::cout << "Parsing failed\n";
-		std::cout << rest << "\n";
+		//std::cout << rest << "\n";
 		std::cout << "-------------------------\n";
         
 		
-		throw ParseException("error");
+		throw ParseException("error", iter);
 	}
-	
-	std::cout << parsedProgram.size() << " instructions.\n";
 }
 
 void Assembler::EncodeOperation(ast::Instruction& instr)
 {
-	if (instr.op.type() == typeid(ast::Directive) ){
+	if (instr.op.type() == typeid(ast::Directive)){
 		return;
 	}
 	
@@ -215,7 +213,8 @@ void Assembler::ResolveArguments()
 				throw ArgumentException("C must be a register.");
 			}
 			
-			instr.encodedInstruction = instr.encodedOp |
+			instr.encodedInstruction = 
+				instr.encodedOp |
 				EncodeA(EvaluateArgument(a.get())) |
 				EncodeB(EvaluateArgument(b.get())) |
 				EncodeC(EvaluateArgument(c));
@@ -229,12 +228,14 @@ void Assembler::ResolveArguments()
 			}
 			
 			if (ast::IsRegister(b.get())){
-				instr.encodedInstruction = instr.encodedOp |
+				instr.encodedInstruction = 
+					instr.encodedOp |
 					EncodeB(EvaluateArgument(b.get())) |
 					EncodeC(EvaluateArgument(c));
 			}
 			else {
-				instr.encodedInstruction = instr.encodedOp |
+				instr.encodedInstruction = 
+					instr.encodedOp |
 					EncodeAddr(EvaluateArgument(b.get())) |
 					EncodeC(EvaluateArgument(c));
 			}

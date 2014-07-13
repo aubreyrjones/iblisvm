@@ -91,12 +91,20 @@ void IblisVM::DecodeAndExecute(ThreadP t)
 	case Op::MUL:
 	case Op::DIV:
 	case Op::MOD:
+	case Op::SHL:
+	case Op::SHR:
+	case Op::AND:
+	case Op::OR:
+	case Op::XOR:
 	case Op::CEQ:
 	case Op::CL:
 	case Op::CLE:
 	case Op::CG:
 	case Op::CGE:
 		Arithmetic(t, instr);
+		break;
+	case Op::NOT:
+		Not(t, instr);
 		break;
 	case Op::JUMP:
 		Jump(t, instr);
@@ -246,16 +254,36 @@ void IblisVM::Arithmetic(ThreadP t, Word instr)
 	case Op::MOD:
 		result = a_arg % b_arg;
 		break;
+	case Op::SHL:
+		result = a_arg << b_arg;
+		break;
+	case Op::SHR:
+		result = a_arg >> b_arg;
+		break;
+	case Op::AND:
+		result = a_arg & b_arg;
+		break;
+	case Op::OR:
+		result = a_arg | b_arg;
+		break;
+	case Op::XOR:
+		result = a_arg ^ b_arg;
+		break;
 	case Op::CEQ:
 		result = (a_arg == b_arg) ? 1 : 0;
+		break;
 	case Op::CL:
 		result = (a_arg < b_arg) ? 1 : 0;
+		break;
 	case Op::CLE:
 		result = (a_arg <= b_arg) ? 1 : 0;
+		break;
 	case Op::CG:
 		result = (a_arg > b_arg) ? 1 : 0;
+		break;
 	case Op::CGE:
 		result = (a_arg >= b_arg) ? 1 : 0;
+		break;
 	default:
 		throw IllegalOp();
 	}
@@ -263,6 +291,20 @@ void IblisVM::Arithmetic(ThreadP t, Word instr)
 	Word res = *reinterpret_cast<Word*>(&result);
 	
 	t->r()[RegC(instr)] = res;
+}
+
+void IblisVM::Not(ThreadP t, Word instr)
+{
+	Word b;
+	
+	if (LiteralB(instr)){
+		b = SignExtend8(RegB(instr));
+	}
+	else {
+		b = t->r()[RegB(instr)];
+	}
+	
+	t->r()[RegC(instr)] = ~b;
 }
 
 void IblisVM::Jump(ThreadP t, Word instr)

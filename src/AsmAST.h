@@ -96,6 +96,9 @@ struct Instruction {
 	/** The complete encoded instruction, including arguments. */
 	::iblis::Word encodedInstruction;
 	
+	/** The line that originally generated this instruction. */
+	std::size_t lineNumber;
+	
 	/**
 	 * Gets A, if it exists.
      */

@@ -5,8 +5,9 @@
  * Created on July 12, 2014, 7:31 PM
  */
 
-#define BOOST_SPIRIT_QI_DEBUG
+#define BOOST_SPIRIT_QI_DEBUG 1
 
+#include <string>
 #include <exception>
 
 #include <boost/config/warning_disable.hpp>
@@ -23,6 +24,8 @@
 #include <boost/spirit/include/phoenix_core.hpp>
 #include <boost/spirit/include/phoenix_function.hpp>
 
+#include <boost/spirit/home/support/iterators/line_pos_iterator.hpp>
+
 #include "AsmAST.h"
 #include "AsmErrors.h"
 
@@ -30,34 +33,24 @@
 #define	ASMGRAMMAR_H
 
 namespace iblis {
-
-//=================GRAMMAR========================
 namespace qi = boost::spirit::qi;
 namespace ascii = boost::spirit::ascii;
 
+//=============== line number iterator ===========
+typedef boost::spirit::line_pos_iterator<std::string::const_iterator> AsmLineIterator;
 
-struct error_handler_
+
+//================ parse exception ===============
+class ParseException : public ASMException
 {
-	template <typename, typename, typename>
-	struct result { typedef void type; };
-	
-	template <typename Iterator>
-	void operator()(qi::info const& what, Iterator err_pos, Iterator last) const
-	{
-		if (err_pos == last){
-			return;
-		}
-		std::cout
-			<< "Error! Expecting "
-			<< what                         // what failed?
-			<< " here: \""
-			<< std::string(err_pos, last)   // iterators to error-pos, end
-			<< "\""
-			<< std::endl
-            ;
-	}
+public:
+	const AsmLineIterator pos;
+	ParseException(const char* err, const AsmLineIterator& it) : ASMException(err), pos(it) {}
 };
-boost::phoenix::function<error_handler_> const error_handler = error_handler_();
+
+
+//=================GRAMMAR========================
+
 
 template <typename Iterator>
 struct AsmSkipper : qi::grammar<Iterator>

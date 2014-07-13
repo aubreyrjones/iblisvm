@@ -14,6 +14,36 @@ namespace iblis{
 namespace qi = boost::spirit::qi;
 namespace ascii = boost::spirit::ascii;
 
+
+struct error_handler_
+{
+	template <typename, typename, typename>
+	struct result { typedef void type; };
+	
+	void operator()(qi::info const& what, AsmLineIterator err_pos, AsmLineIterator end) const
+	{
+		if (err_pos == end){
+			return;
+		}
+		
+		std::cout << "Error on line: " << err_pos.position() << "\n"
+				  << "Rule failure: " << what << "\n";
+		throw ParseException("RIGHT NOW!", err_pos);
+	}
+};
+boost::phoenix::function<error_handler_> const error_handler = error_handler_();
+
+struct ast_annotator_
+{
+	template <typename, typename>
+	struct result { typedef void type; };
+	
+	void operator()(AsmLineIterator start_pos, ast::Instruction& instr) const {
+		instr.lineNumber = start_pos.position();
+	}
+};
+boost::phoenix::function<ast_annotator_> const ast_annotator = ast_annotator_();
+
 template <typename Iterator>
 AsmSkipper<Iterator>::AsmSkipper() : AsmSkipper::base_type(start)
 {
@@ -37,11 +67,10 @@ AsmGrammar<Iterator, SkipType>::AsmGrammar() : AsmGrammar::base_type(program, "a
 	using boost::spirit::eoi;
 	using ascii::no_case;
 	
-	using boost::phoenix::val;
-	
 	qi::_2_type _2;
 	qi::_3_type _3;
 	qi::_4_type _4;
+	qi::_val_type _val;
 	
 	opcode.add
 	("nop",		Op::NOP)
@@ -58,11 +87,17 @@ AsmGrammar<Iterator, SkipType>::AsmGrammar() : AsmGrammar::base_type(program, "a
 	("mul",		Op::MUL)
 	("div",		Op::DIV)
 	("mod",		Op::MOD)
+	("shl",		Op::SHL)
+	("shr",		Op::SHR)
+	("and",		Op::AND)
+	("or",		Op::OR)
+	("xor",		Op::XOR)
 	("ceq",		Op::CEQ)
 	("cl",		Op::CL)
 	("cle",		Op::CLE)
 	("cg",		Op::CG)
 	("cge",		Op::CGE)
+	("not",		Op::NOT)
 	("jump",	Op::JUMP)
 	("jumpt",	Op::JUMP_TRUE)
 	("call",	Op::CALL)
@@ -90,11 +125,11 @@ AsmGrammar<Iterator, SkipType>::AsmGrammar() : AsmGrammar::base_type(program, "a
 	
 	pseudo_op = qi::lexeme[no_case[opcode | directive] >> !ascii::alpha]; //qi::omit[ascii::space]];
 	
-	instruction = ( -(label > ':') ) 
-			>> ( pseudo_op >> arg_list ) 
-			> (eol | eoi);
+	instruction = ( -(label > ':' >> qi::omit[ *ascii::space ]) ) 
+				  >> ( pseudo_op >> arg_list ) 
+				  > (eol | eoi);
 	
-	program = qi::omit[ *ascii::space ] >> +(instruction >> qi::omit[ *ascii::space ]) >> qi::omit[ *ascii::space ];
+	program = qi::omit[ *ascii::space ] >> +(instruction > qi::omit[ *ascii::space ]);
 	
 	
 	//===============error handling================
@@ -106,24 +141,21 @@ AsmGrammar<Iterator, SkipType>::AsmGrammar() : AsmGrammar::base_type(program, "a
 	pseudo_op.name("pseudo");
 	instruction.name("instr");
 	program.name("asm_program");
+		
+//	BOOST_SPIRIT_DEBUG_NODE(label);
+//	BOOST_SPIRIT_DEBUG_NODE(index_expr);
+//	BOOST_SPIRIT_DEBUG_NODE(reg_ref);
+//	BOOST_SPIRIT_DEBUG_NODE(arg);
+//	BOOST_SPIRIT_DEBUG_NODE(arg_list);
+//	BOOST_SPIRIT_DEBUG_NODE(pseudo_op);
+//	BOOST_SPIRIT_DEBUG_NODE(instruction);
+//	BOOST_SPIRIT_DEBUG_NODE(program);
 	
-	//		BOOST_SPIRIT_DEBUG_NODE(label);
-	//		BOOST_SPIRIT_DEBUG_NODE(index_expr);
-	//		BOOST_SPIRIT_DEBUG_NODE(reg_ref);
-	//		BOOST_SPIRIT_DEBUG_NODE(arg);
-	//		BOOST_SPIRIT_DEBUG_NODE(arg_list);
-	//		BOOST_SPIRIT_DEBUG_NODE(pseudo_op);
-	//		BOOST_SPIRIT_DEBUG_NODE(instruction);
-	//		BOOST_SPIRIT_DEBUG_NODE(program);
-	
-	qi::on_error<qi::fail>(program, error_handler(_4, _3, _2));
+	qi::on_success(instruction, ast_annotator(_3, _val));
 	qi::on_error<qi::fail>(instruction, error_handler(_4, _3, _2));
 	qi::on_error<qi::fail>(pseudo_op, error_handler(_4, _3, _2));
-	qi::on_error<qi::fail>(arg, error_handler(_4, _3, _2));
-	qi::on_error<qi::fail>(arg_list, error_handler(_4, _3, _2));
-	qi::on_error<qi::fail>(reg_ref, error_handler(_4, _3, _2));
-	qi::on_error<qi::fail>(index_expr, error_handler(_4, _3, _2));
-	qi::on_error<qi::fail>(label, error_handler(_4, _3, _2));
+	qi::on_error<qi::fail>(program, error_handler(_4, _3, _2));
+	
 }
 }
 

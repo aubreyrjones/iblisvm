@@ -129,6 +129,7 @@ private:
 	void Pop(ThreadP t, Word instr);
 	void Const(ThreadP t, Word instr);
 	void Arithmetic(ThreadP t, Word instr);
+	void Not(ThreadP t, Word instr);
 	void Jump(ThreadP t, Word instr);
 	void JumpTrue(ThreadP t, Word instr);
 	void Call(ThreadP t, Word instr);

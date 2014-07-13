@@ -12,20 +12,14 @@ class ASMException : public std::exception
 {
 public:
 	const char* err;
-
+	
 	ASMException(const char* err) : err(err) {}
 	
 	virtual const char* what() const noexcept
 	{
 		return err;
 	}
-};
-
-
-class ParseException : public ASMException
-{
-public:
-	ParseException(const char* err) : ASMException(err) {}
+	
 };
 
 class EncodeException : public ASMException
