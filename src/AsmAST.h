@@ -161,7 +161,7 @@ inline OUT& operator<<(OUT& out, const Directive& d){
 	switch (d){
 	case Directive::LOCATE:		return out << ".locate";
 	case Directive::DEF:		return out << ".def";
-	default: return out << ".unknown";
+	default:					return out << ".unknown";
 	}
 	
 }

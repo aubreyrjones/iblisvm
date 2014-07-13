@@ -41,11 +41,12 @@ static option::ArgStatus ArgRequired(const option::Option& option, bool msg)
     return option::ARG_ILLEGAL;
 }
 
-enum OptionIndex {HELP, ASM_FILE, PRINT_HEX};
+enum OptionIndex {HELP, ASM_FILE, PRINT_HEX, PRINT_ASM};
 const option::Descriptor usage[] = {
 	{HELP, 0, "h", "help", option::Arg::None, "-h\t --help\t Get usage help."},
 	{ASM_FILE, 0, "a", "asm_file", ArgRequired, "-a\t --asm_file\t File to assemble."},
 	{PRINT_HEX, 0, "H", "print_hex", option::Arg::None, "-H\t --print_hex\t Print the hex dump of the assembled file."},
+	{PRINT_ASM, 0, "A", "print_asm", option::Arg::None, "-A\t --print_asm\t Print the AST for the assembler."},
 	{0, 0, 0, 0, 0, 0}
 };
 
@@ -71,6 +72,12 @@ int main(int argc, char **argv)
 	//===== handle requested operations =====
 	if (options[ASM_FILE]){
 		iblis::Assembler *as = AssembleFile(options[ASM_FILE].arg);
+		
+		if (options[PRINT_ASM]){
+			for (iblis::ast::Instruction i : as->GetProgram()){	
+				std::cout << i << "\n";
+			}
+		}
 		
 		as->Assemble();
 		

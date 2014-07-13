@@ -299,28 +299,34 @@ void Assembler::RegisterLabel(const ast::Label& name, const Word& address)
 
 void Assembler::ExecuteDirective(ast::Instruction& instr)
 {
-	switch (boost::get<ast::Directive>(instr.op)){
-	case ast::Directive::DEF:
-		if (!instr.ArgB() || instr.ArgB().get().type() != typeid(ast::Label)){
+	ast::Directive dir = boost::get<ast::Directive>(instr.op);
+	
+	if (dir == ast::Directive::DEF){
+		if (!instr.ArgB()){
 			throw ArgumentException(".def <name>, <literal>");
 		}
 		
-		if (instr.ArgC().type() == typeid(ast::RegisterReference)){
+		if (instr.ArgC().type() == typeid(ast::RegisterReference) ||
+			instr.ArgB().get().type() == typeid(ast::RegisterReference)){
 			throw ArgumentException(".def cannot assign registers.");
 		}
 		
-		RegisterLabel(boost::get<ast::Label>(instr.ArgB().get()), 
+		ast::IndexExpression& bExpr = boost::get<ast::IndexExpression>(instr.ArgB().get());
+		
+		if (!instr.ArgB() || bExpr.type() != typeid(ast::Label)){
+			throw ArgumentException(".def <name>, <literal>");
+		}
+		
+		RegisterLabel(boost::get<ast::Label>(bExpr), 
 					  EvaluateExpression(boost::get<ast::IndexExpression>(instr.ArgC())));
 		
-		break;
-	
-	case ast::Directive::LOCATE:
+	}
+	else if (dir == ast::Directive::LOCATE) {
 		if (instr.ArgC().type() == typeid(ast::RegisterReference)){
 			throw ArgumentException(".locate <literal>");
 		}
 		
 		ip = EvaluateExpression(boost::get<ast::IndexExpression>(instr.ArgC()));
-		break;
 	}
 }
 
@@ -332,6 +338,8 @@ void Assembler::ScanAndFix()
 			RegisterLabel(instr.label.get(), ip);
 		}
 		
+		instr.address = ip;
+		
 		if (instr.op.type() == typeid(ast::Directive)){
 			ExecuteDirective(instr);
 			continue;
@@ -339,7 +347,7 @@ void Assembler::ScanAndFix()
 		
 		EncodeOperation(instr);
 		
-		instr.address = ip++;
+		ip++;
 	}
 }
 
