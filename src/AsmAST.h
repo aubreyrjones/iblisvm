@@ -31,7 +31,8 @@ namespace iblis { namespace ast {
  */
 enum class Directive {
 	LOCATE,
-	DEF
+	DEF,
+	DATA
 };
 
 //uninitialized member
@@ -161,6 +162,7 @@ inline OUT& operator<<(OUT& out, const Directive& d){
 	switch (d){
 	case Directive::LOCATE:		return out << ".locate";
 	case Directive::DEF:		return out << ".def";
+	case Directive::DATA:		return out << ".data";
 	default:					return out << ".unknown";
 	}
 	
