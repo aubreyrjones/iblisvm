@@ -8,6 +8,8 @@
 #ifndef ASMGRAMMAR_DEF_H
 #define	ASMGRAMMAR_DEF_H
 
+#include <boost/format.hpp>
+
 #include "AsmGrammar.h"
 
 namespace iblis{
@@ -17,18 +19,17 @@ namespace ascii = boost::spirit::ascii;
 
 struct error_handler_
 {
-	template <typename, typename, typename>
+	template <typename, typename, typename, typename>
 	struct result { typedef void type; };
 	
-	void operator()(qi::info const& what, AsmLineIterator err_pos, AsmLineIterator end) const
+	void operator()(const std::string& what, const qi::info& info, AsmLineIterator err_pos, AsmLineIterator end) const
 	{
 		if (err_pos == end){
 			return;
 		}
 		
-		std::cout << "Error on line: " << err_pos.position() << "\n"
-				  << "Rule failure: " << what << "\n";
-		throw ParseException("RIGHT NOW!", err_pos);
+		throw ParseException(boost::str(boost::format("Error on line %1%. %2%. Rule failure: %3%\n") % err_pos.position() % what % info), 
+							 err_pos);
 	}
 };
 boost::phoenix::function<error_handler_> const error_handler = error_handler_();
@@ -113,24 +114,24 @@ AsmGrammar<Iterator, SkipType>::AsmGrammar() : AsmGrammar::base_type(program, "a
 	label = id_rule - pseudo_op;
 	
 	index_expr = label |
-			qi::lexeme[ "0x" > boost::spirit::hex] |
-			qi::lexeme[boost::spirit::int_] ;
+				 qi::lexeme[ "0x" > boost::spirit::hex] |
+				 qi::lexeme[boost::spirit::int_] ;
 	
 	
 	reg_ref = char_('r') >> "[" > index_expr > ']';
 	
 	arg = reg_ref | index_expr;
 	
-	arg_list = arg % ',';
+	//arg_list = arg % ',';
 	
-	pseudo_op = qi::lexeme[no_case[opcode | directive] >> !ascii::alpha]; //qi::omit[ascii::space]];
+	pseudo_op = qi::lexeme[no_case[opcode | directive] >> !ascii::alnum];
 	
 	instruction = ( -(label > ':' >> qi::omit[ *ascii::space ]) ) 
-				  >> ( pseudo_op >> arg_list ) 
+				  > ( pseudo_op > (arg % ',') ) 
 				  > (eol | eoi);
 	
-	program = qi::omit[ *ascii::space ] >> +(instruction > qi::omit[ *ascii::space ]);
 	
+	program = qi::omit[ *ascii::space ] >> +(instruction >> qi::omit[ *ascii::space ]);
 	
 	//===============error handling================
 	label.name("label");
@@ -152,9 +153,9 @@ AsmGrammar<Iterator, SkipType>::AsmGrammar() : AsmGrammar::base_type(program, "a
 //	BOOST_SPIRIT_DEBUG_NODE(program);
 	
 	qi::on_success(instruction, ast_annotator(_3, _val));
-	qi::on_error<qi::fail>(instruction, error_handler(_4, _3, _2));
-	qi::on_error<qi::fail>(pseudo_op, error_handler(_4, _3, _2));
-	qi::on_error<qi::fail>(program, error_handler(_4, _3, _2));
+	
+	qi::on_error<qi::fail>(instruction, error_handler("Cannot parse instruction.", _4, _3, _2));
+	//qi::on_error<qi::fail>(program, error_handler(_4, _3, _2));
 	
 }
 }

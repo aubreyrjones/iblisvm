@@ -8,7 +8,6 @@
 #define BOOST_SPIRIT_QI_DEBUG 1
 
 #include <string>
-#include <exception>
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
@@ -45,7 +44,7 @@ class ParseException : public ASMException
 {
 public:
 	const AsmLineIterator pos;
-	ParseException(const char* err, const AsmLineIterator& it) : ASMException(err), pos(it) {}
+	ParseException(const std::string& err, const AsmLineIterator& it) : ASMException(err), pos(it) {}
 };
 
 

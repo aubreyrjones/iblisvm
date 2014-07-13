@@ -1,11 +1,13 @@
 #include <string>
-#include "optionparser.h"
-#include "IblisASM.h"
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
 #include <streambuf>
 #include <sstream>
+
+#include "optionparser.h"
+#include "IblisASM.h"
+#include "AsmErrors.h"
 //===================== ACTIONS ===========================
 
 /**
@@ -71,7 +73,15 @@ int main(int argc, char **argv)
 	
 	//===== handle requested operations =====
 	if (options[ASM_FILE]){
-		iblis::Assembler *as = AssembleFile(options[ASM_FILE].arg);
+		iblis::Assembler *as;
+		try {
+			 as = AssembleFile(options[ASM_FILE].arg);
+		}
+		catch (iblis::ASMException& e){
+			std::cout << "Parse failure: ";
+			std::cout << e.what() << "\n";
+			return 1;
+		}
 		
 		if (options[PRINT_ASM]){
 			for (iblis::ast::Instruction i : as->GetProgram()){	
@@ -79,7 +89,13 @@ int main(int argc, char **argv)
 			}
 		}
 		
-		as->Assemble();
+		try {
+			as->Assemble();
+		}
+		catch (iblis::EncodeException& e){
+			std::cout << "Encoding failure on line " << e.lineNumber << ". " << e.what() << "\n";
+			return 1;
+		}
 		
 		if (options[PRINT_HEX]){
 			for (iblis::ast::Instruction i : as->GetProgram()){

@@ -5,46 +5,44 @@
  * Created on July 12, 2014, 7:40 PM
  */
 
+#include <stdexcept>
+#include <string>
+
 #ifndef ASMERRORS_H
 #define	ASMERRORS_H
 
-class ASMException : public std::exception
+namespace iblis{
+class ASMException : public std::runtime_error
 {
 public:
-	const char* err;
-	
-	ASMException(const char* err) : err(err) {}
-	
-	virtual const char* what() const noexcept
-	{
-		return err;
-	}
-	
+	ASMException(const std::string& err) : std::runtime_error(err) {}	
 };
 
 class EncodeException : public ASMException
 {
 public:
-	EncodeException(const char* err) : ASMException(err) {}
+	std::size_t lineNumber;
+	EncodeException(const std::string& err, std::size_t lineNumber) : ASMException(err), lineNumber(lineNumber) {}
 };
 
-class ArgumentException : public ASMException
+class ArgumentException : public EncodeException
 {
 public:
-	ArgumentException(const char* err) : ASMException(err) {}
+	ArgumentException(const std::string& err, std::size_t lineNumber) : EncodeException(err, lineNumber) {}
 };
 
-class LabelConflict : public ASMException
+class LabelConflict : public EncodeException
 {
 public:
-	LabelConflict(const char* err) : ASMException(err) {}
+	LabelConflict(const std::string& err, std::size_t lineNumber) : EncodeException(err, lineNumber) {}
 };
 
-class UnknownLabel : public ASMException
+class UnknownLabel : public EncodeException
 {
 public:
-	UnknownLabel(const char* err) : ASMException(err) {}
+	UnknownLabel(const std::string& err, std::size_t lineNumber) : EncodeException(err, lineNumber) {}
 };
+}
 
 #endif	/* ASMERRORS_H */
 

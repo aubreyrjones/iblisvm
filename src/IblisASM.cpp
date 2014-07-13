@@ -29,15 +29,7 @@ Assembler::Assembler(std::string& source) :
 	bool parsed = qi::phrase_parse(iter, end, grammar, AsmSkipper<AsmLineIterator>(), parsedProgram);
 	
 	if (!parsed || iter != end){
-		
-		std::string rest(iter, end);
-		std::cout << "\n-------------------------\n";
-		std::cout << "Parsing failed\n";
-		//std::cout << rest << "\n";
-		std::cout << "-------------------------\n";
-        
-		
-		throw ParseException("error", iter);
+		throw ParseException("Unknown parse error.", iter);
 	}
 }
 
@@ -52,7 +44,7 @@ void Assembler::EncodeOperation(ast::Instruction& instr)
 	
 	if (OneArg(op)){ //we're a jump
 		if (instr.ArgB()){ //exactly one argument
-			throw ArgumentException("Only one argument expected.");
+			throw ArgumentException("One argument expected, got two or more.", instr.lineNumber);
 		}
 		
 		if (ast::IsRegister(instr.ArgC())){
@@ -61,11 +53,11 @@ void Assembler::EncodeOperation(ast::Instruction& instr)
 	}
 	else if (ThreeArgs(op)){
 		if (!instr.ArgA() || !instr.ArgB()){
-			throw ArgumentException("Three arguments expected.");
+			throw ArgumentException("Three arguments expected.", instr.lineNumber);
 		}
 				
 		if (!ast::IsRegister(instr.ArgC())){
-			throw EncodeException("C must be a register for arithmetic/compare operations.");
+			throw EncodeException("C must be a register for arithmetic/compare operations.", instr.lineNumber);
 		}
 		
 		if (!ast::IsRegister(instr.ArgA().get())){
@@ -78,18 +70,18 @@ void Assembler::EncodeOperation(ast::Instruction& instr)
 	}
 	else {
 		if (!instr.ArgB() || instr.ArgA()){ //exactly two arguments
-			throw ArgumentException("Two arguments expected, got three.");
+			throw ArgumentException("Two arguments expected, got three.", instr.lineNumber);
 		}
 		
 		if (ast::IsRegister(instr.ArgB().get())){
 			if (op == Op::CONST){
-				throw ArgumentException("Argument B for CONST cannot be a register reference.");
+				throw ArgumentException("Argument B for CONST cannot be a register reference.", instr.lineNumber);
 			}
 			instr.encodedOp |= IBLIS_LS_MODE_BIT;
 		}
 		else {
 			if (op == Op::PUSH || op == Op::POP || op == Op::COPY){
-				throw EncodeException("Argument B for PUSH/POP/COPY must be a register.");
+				throw EncodeException("Argument B for PUSH/POP/COPY must be a register.", instr.lineNumber);
 			}
 		}
 	}
@@ -111,7 +103,7 @@ Word Assembler::EvaluateArgument(ast::Argument& arg)
 void Assembler::RegisterLabel(const ast::Label& name, const Word& address)
 {
 	if (labelAddress.find(name) != labelAddress.end()){
-		throw LabelConflict("conflict");
+		throw LabelConflict(name, 0);
 	}
 	
 	labelAddress.insert(LabelMap::value_type(name, address));
@@ -123,18 +115,18 @@ void Assembler::ExecuteDirective(ast::Instruction& instr)
 	
 	if (dir == ast::Directive::DEF){
 		if (!instr.ArgB()){
-			throw ArgumentException(".def <name>, <literal>");
+			throw ArgumentException(".def <name>, <literal>", instr.lineNumber);
 		}
 		
 		if (instr.ArgC().type() == typeid(ast::RegisterReference) ||
 			instr.ArgB().get().type() == typeid(ast::RegisterReference)){
-			throw ArgumentException(".def cannot assign registers.");
+			throw ArgumentException(".def cannot assign registers.", instr.lineNumber);
 		}
 		
 		ast::IndexExpression& bExpr = boost::get<ast::IndexExpression>(instr.ArgB().get());
 		
 		if (!instr.ArgB() || bExpr.type() != typeid(ast::Label)){
-			throw ArgumentException(".def <name>, <literal>");
+			throw ArgumentException(".def <name>, <literal>", instr.lineNumber);
 		}
 		
 		RegisterLabel(boost::get<ast::Label>(bExpr), 
@@ -143,13 +135,14 @@ void Assembler::ExecuteDirective(ast::Instruction& instr)
 	}
 	else if (dir == ast::Directive::LOCATE) {
 		if (instr.ArgC().type() == typeid(ast::RegisterReference)){
-			throw ArgumentException(".locate <literal>");
+			throw ArgumentException(".locate <literal>", instr.lineNumber);
 		}
 		
 		ip = EvaluateExpression(boost::get<ast::IndexExpression>(instr.ArgC()));
 	}
 	else if (dir == ast::Directive::DATA) {
-		
+		//we actually encode the data in ResolveArguments(), since it could
+		//potentially involve a label ref.
 		ip++;
 	}
 }
@@ -206,11 +199,11 @@ void Assembler::ResolveArguments()
 		}
 		else if (ThreeArgs(op)){
 			if (!a || !b){
-				throw ArgumentException("Expected three arguments.");
+				throw ArgumentException("Expected three arguments.", instr.lineNumber);
 			}
 			
 			if (!ast::IsRegister(c)){
-				throw ArgumentException("C must be a register.");
+				throw ArgumentException("C must be a register.", instr.lineNumber);
 			}
 			
 			instr.encodedInstruction = 
@@ -221,10 +214,10 @@ void Assembler::ResolveArguments()
 		}
 		else {
 			if (!b){
-				throw ArgumentException("Expected two arguments, got one.");
+				throw ArgumentException("Expected two arguments, got one.", instr.lineNumber);
 			}
 			if (a){
-				throw ArgumentException("Expected two arguments, got three.");
+				throw ArgumentException("Expected two arguments, got three.", instr.lineNumber);
 			}
 			
 			if (ast::IsRegister(b.get())){
@@ -266,7 +259,7 @@ ExpressionEvaluator::result_type ExpressionEvaluator::operator()(unsigned int& i
 
 ExpressionEvaluator::result_type ExpressionEvaluator::operator()(ast::Label& label){
 	if (as->labelAddress.find(label) == as->labelAddress.end()){
-		throw UnknownLabel("unknown");
+		throw UnknownLabel(label, 0);
 	}
 	
 	return as->labelAddress[label];
